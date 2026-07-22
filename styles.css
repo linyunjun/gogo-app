@@ -732,7 +732,7 @@ textarea {
 
 .stitch-edit-card {
   display: grid;
-  grid-template-columns: 28px repeat(3, minmax(72px, 120px)) 58px;
+  grid-template-columns: 28px 8em 4em 7em 58px;
   justify-content: start;
   gap: 8px;
   padding: 10px;
@@ -921,8 +921,8 @@ textarea {
     padding-bottom: 2px;
   }
   .stitch-edit-card {
-    grid-template-columns: 28px repeat(3, 88px) 56px;
-    min-width: 388px;
+    grid-template-columns: 28px 8em 4em 7em 56px;
+    min-width: 382px;
   }
   .stitch-edit-card .delete-stitch-button { grid-column: auto; }
   .brand-add-row { grid-template-columns: 1fr 82px; }
