@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8f4ee" />
+    <title>針跡手帳</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <button class="header-icon hidden" id="backBtn" aria-label="返回">‹</button>
+        <div class="header-title">
+          <h1 id="screenTitle">作品</h1>
+        </div>
+        <div class="header-actions">
+          <button class="icon-button" id="exportBtn" title="匯出資料" aria-label="匯出資料">↓</button>
+          <label class="icon-button import-button" title="匯入資料" aria-label="匯入資料">
+            ↑
+            <input id="importInput" type="file" accept="application/json" />
+          </label>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="view active" id="projectsView">
+          <div class="section-header">
+            <h2>我的作品</h2>
+            <button class="primary-button compact" id="newProjectBtn">+ 新增</button>
+          </div>
+          <div class="project-list" id="projectList"></div>
+        </section>
+
+        <section class="view" id="detailView">
+          <article class="detail-hero">
+            <label class="photo-picker large" id="projectPhotoPicker">
+              <input id="projectPhotoInput" type="file" accept="image/*" />
+              <img id="projectPhoto" alt="作品照片" />
+              <span>加入作品圖片</span>
+            </label>
+            <div class="detail-head">
+              <span class="pill" id="detailType">鉤針</span>
+              <h2 id="detailName">作品名稱</h2>
+              <div class="progress-row">
+                <div class="progress-bar"><span id="detailProgressFill"></span></div>
+                <strong id="detailPercent">0%</strong>
+              </div>
+              <p id="detailProgressText">尚未開始</p>
+            </div>
+          </article>
+
+          <section class="info-card">
+            <div class="info-row">
+              <span>狀態</span>
+              <strong id="detailStatus">進行中</strong>
+            </div>
+            <div class="info-row">
+              <span>線材</span>
+              <strong id="detailYarn">未綁定</strong>
+            </div>
+            <div class="info-row">
+              <span>工具</span>
+              <strong id="detailNeedle">未填寫</strong>
+            </div>
+          </section>
+
+          <section class="section-header inline">
+            <h2>織圖</h2>
+          </section>
+          <div class="attached-patterns" id="attachedPatternList"></div>
+
+          <details class="settings-card">
+            <summary>作品設定</summary>
+            <form class="form-grid" id="projectForm">
+              <label>
+                作品名稱
+                <input id="projectName" autocomplete="off" />
+              </label>
+              <label>
+                類型
+                <select id="projectType">
+                  <option>鉤針</option>
+                  <option>棒針</option>
+                  <option>混合</option>
+                </select>
+              </label>
+              <label>
+                狀態
+                <select id="projectStatus">
+                  <option>進行中</option>
+                  <option>暫停</option>
+                  <option>已完成</option>
+                </select>
+              </label>
+              <label>
+                織圖模板
+                <select id="projectPatternSelect"></select>
+              </label>
+              <label>
+                使用線材
+                <div class="multi-select" id="projectYarns"></div>
+              </label>
+              <label>
+                工具尺寸
+                <div class="multi-select" id="projectTools"></div>
+              </label>
+              <label class="wide-field">
+                備註
+                <textarea id="projectNotes" rows="2"></textarea>
+              </label>
+            </form>
+            <button class="danger-button full-width" id="deleteProjectBtn">刪除此作品</button>
+          </details>
+        </section>
+
+        <section class="view" id="trackView">
+          <section class="pattern-card">
+            <div class="pattern-topline">
+              <button class="plain-button" id="previousRoundBtn">‹</button>
+              <div>
+                <h2 id="roundTitle">R1</h2>
+                <p id="roundMeta">共 1 段</p>
+              </div>
+              <button class="plain-button" id="nextRoundBtn">›</button>
+            </div>
+
+            <details class="instruction-toggle">
+              <summary>針法說明</summary>
+              <div class="legend-list" id="legendList"></div>
+            </details>
+
+            <div class="written-pattern" id="writtenPattern"></div>
+          </section>
+
+          <section class="mobile-counter">
+            <button class="secondary-action" id="previousStitchBtn">← 上一針</button>
+            <div class="stitch-number">
+              <strong id="currentStitch">1</strong>
+              <span>/</span>
+              <span id="totalStitches">1</span>
+            </div>
+            <button class="primary-action" id="nextStitchBtn">下一針 →</button>
+            <button class="quiet-action" id="restartRoundBtn">重新開始此段</button>
+            <button class="done-action" id="completeRoundBtn">完成此段</button>
+          </section>
+        </section>
+
+        <section class="view" id="patternsView">
+          <div class="section-header">
+            <h2>織圖庫</h2>
+            <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
+          </div>
+          <div class="pattern-list" id="patternList"></div>
+        </section>
+
+        <section class="view" id="patternEditView">
+          <div class="section-header">
+            <div>
+              <h2 id="patternEditTitle">編輯織圖</h2>
+              <p class="muted" id="patternEditMeta">共 0 段</p>
+            </div>
+            <button class="danger-button" id="deletePatternBtn">刪除</button>
+          </div>
+
+          <div class="pattern-editor-card">
+            <label>
+              織圖名稱
+              <input id="patternName" />
+            </label>
+            <label>
+              來源 / 連結
+              <input id="patternSource" placeholder="可貼原作者網址或購買來源" />
+            </label>
+            <label>
+              使用線材
+              <div class="multi-select" id="patternYarns"></div>
+            </label>
+            <label>
+              使用消耗品
+              <div class="multi-select" id="patternSupplies"></div>
+            </label>
+            <label>
+              使用工具
+              <div class="multi-select" id="patternTools"></div>
+            </label>
+            <label class="photo-tile">
+              <input id="patternImageInput" type="file" accept="image/*" multiple />
+              <span>+ 新增織圖圖片</span>
+            </label>
+            <div class="image-strip" id="patternImages"></div>
+
+            <div class="segment-toolbar">
+              <button class="outline-button" id="addPartBtn">+ 新增部分</button>
+            </div>
+
+            <div class="segment-list" id="segmentList"></div>
+          </div>
+        </section>
+
+        <section class="view" id="partEditView">
+          <div class="section-header">
+            <div>
+              <h2 id="partEditTitle">編輯部分</h2>
+              <p class="muted" id="partEditMeta">共 0 段</p>
+            </div>
+          </div>
+
+          <div class="pattern-editor-card">
+            <label>
+              部分名稱
+              <input id="partName" />
+            </label>
+            <label class="wide-field">
+              備註
+              <textarea id="partNotes" rows="2"></textarea>
+            </label>
+            <div class="segment-toolbar">
+              <button class="outline-button" id="addGroupBtn">+ 新增群組</button>
+              <button class="primary-button" id="addSegmentBtn">+ 新增段落</button>
+            </div>
+            <div class="segment-list" id="partSegmentList"></div>
+          </div>
+        </section>
+
+        <section class="view" id="stashView">
+          <div class="section-header">
+            <h2>庫存</h2>
+            <button class="primary-button compact" id="newYarnBtn">+ 新增</button>
+          </div>
+          <div class="segmented-control" id="stockTypeTabs">
+            <button class="active" data-stock-type="yarn">線材</button>
+            <button data-stock-type="supply">消耗品</button>
+          </div>
+          <div class="stash-list" id="stashList"></div>
+        </section>
+
+        <section class="view" id="yarnEditView">
+          <div class="section-header">
+            <h2 id="yarnEditTitle">編輯線材</h2>
+            <button class="danger-button" id="deleteYarnBtn">刪除</button>
+          </div>
+          <form class="form-grid" id="yarnForm">
+            <label class="photo-tile wide-field">
+              <input id="yarnImageInput" type="file" accept="image/*" />
+              <span>+ 新增圖片</span>
+            </label>
+            <div class="image-strip wide-field" id="yarnImagePreview"></div>
+            <label>
+              類型
+              <select id="yarnStockType">
+                <option value="yarn">線材</option>
+                <option value="supply">消耗品</option>
+              </select>
+            </label>
+            <label>
+              顏色
+              <input id="yarnColorName" placeholder="例：奶茶、霧灰、櫻桃紅" />
+            </label>
+            <label>
+              分類
+              <select id="yarnCategory"></select>
+            </label>
+            <label>
+              品牌
+              <select id="yarnBrand"></select>
+            </label>
+            <label>
+              色號
+              <input id="yarnLot" />
+            </label>
+            <label>
+              數量
+              <input id="yarnAmount" type="number" min="0" />
+            </label>
+            <label>
+              重量 g
+              <input id="yarnWeight" type="number" min="0" />
+            </label>
+            <label class="wide-field">
+              購買連結
+              <input id="yarnUrl" type="url" placeholder="https://..." />
+            </label>
+            <label class="wide-field">
+              備註
+              <textarea id="yarnNotes" rows="2"></textarea>
+            </label>
+            <section class="wide-field supply-colors" id="supplyColorsSection">
+              <div class="section-header inline">
+                <h2>顏色</h2>
+                <button class="primary-button compact" id="addSupplyColorBtn" type="button">新增顏色</button>
+              </div>
+              <div class="segment-list" id="supplyColorList"></div>
+            </section>
+          </form>
+        </section>
+
+        <section class="view" id="settingsView">
+          <div class="section-header">
+            <h2>設定</h2>
+          </div>
+
+          <section class="settings-card open-card">
+            <label>
+              計數時顯示
+              <select id="displayMode">
+                <option value="abbr">美式英文縮寫</option>
+                <option value="zh">中文</option>
+                <option value="symbol">符號</option>
+                <option value="letter">簡計</option>
+              </select>
+            </label>
+            <label>
+              段落標題
+              <select id="roundLabelMode">
+                <option value="zh">第 X 圈</option>
+                <option value="r">RX</option>
+              </select>
+            </label>
+            <label>
+              顏色
+              <select id="themeColor">
+                <option value="rose">玫瑰粉</option>
+                <option value="sage">鼠尾草綠</option>
+                <option value="sky">天空藍</option>
+                <option value="plum">莓果紫</option>
+                <option value="charcoal">石墨灰</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>自訂針法</h2>
+              <button class="primary-button compact" id="addStitchBtn">+ 新增</button>
+            </div>
+            <div class="stitch-editor-list" id="stitchEditorList"></div>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>線材品牌</h2>
+            </div>
+            <div class="brand-add-row">
+              <input id="newBrandName" placeholder="新增品牌名稱" />
+              <button class="primary-button compact" id="addBrandBtn">新增</button>
+            </div>
+            <div class="brand-list" id="brandList"></div>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>庫存分類</h2>
+            </div>
+            <div class="brand-add-row">
+              <input id="newCategoryName" placeholder="新增分類名稱" />
+              <button class="primary-button compact" id="addCategoryBtn">新增</button>
+            </div>
+            <div class="brand-list" id="categoryList"></div>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>作品類型</h2>
+            </div>
+            <div class="brand-add-row">
+              <input id="newProjectTypeName" placeholder="新增類型，例如 包包、娃娃" />
+              <button class="primary-button compact" id="addProjectTypeBtn">新增</button>
+            </div>
+            <div class="brand-list" id="projectTypeList"></div>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>常用群組</h2>
+              <button class="primary-button compact" id="addCommonGroupBtn">新增</button>
+            </div>
+            <div class="segment-list" id="commonGroupList"></div>
+          </section>
+
+          <section class="settings-card open-card">
+            <div class="section-header inline">
+              <h2>工具</h2>
+            </div>
+            <div class="tool-add-grid">
+              <input id="newToolName" placeholder="工具名稱，例如 4.0 mm 鉤針" />
+              <input id="newToolBrand" placeholder="品牌，可留空" />
+              <input id="newToolUrl" placeholder="購買網址，可留空" />
+              <button class="primary-button compact" id="addToolBtn">新增</button>
+            </div>
+            <div class="tool-list" id="toolList"></div>
+          </section>
+        </section>
+      </main>
+
+      <div class="modal hidden" id="attachModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>選擇織圖</h2>
+            <button class="header-icon" id="closeAttachModal">×</button>
+          </div>
+          <div class="pattern-list" id="attachPatternOptions"></div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="partActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="partActionTitle">部分選項</h2>
+            <button class="header-icon" id="closePartActionModal">×</button>
+          </div>
+          <label>
+            複製份數
+            <input id="partCopyCount" type="number" min="1" value="1" />
+          </label>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="copyPartBtn">複製部分</button>
+            <button class="danger-button" id="deletePartBtn">刪除部分</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="patternActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="patternActionTitle">織圖選項</h2>
+            <button class="header-icon" id="closePatternActionModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="pinPatternBtn">置頂</button>
+            <button class="danger-button" id="deletePatternFromListBtn">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="projectActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="projectActionTitle">作品選項</h2>
+            <button class="header-icon" id="closeProjectActionModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="pinProjectBtn">置頂</button>
+            <button class="danger-button" id="deleteProjectFromListBtn">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="toolEditModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>編輯工具</h2>
+            <button class="header-icon" id="closeToolEditModal">×</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              名稱
+              <input id="editToolName" />
+            </label>
+            <label>
+              品牌
+              <input id="editToolBrand" />
+            </label>
+            <label class="wide-field">
+              購買網址
+              <input id="editToolUrl" />
+            </label>
+          </div>
+          <button class="danger-button full-width" id="deleteToolBtn">刪除此工具</button>
+        </div>
+      </div>
+
+      <div class="toast hidden" id="finishToast">
+        <strong>恭喜完成！</strong>
+        <span id="finishToastText">這份織圖已經 100%。</span>
+      </div>
+
+      <nav class="bottom-nav" aria-label="主要功能">
+        <button class="nav-tab active" data-view="projects">
+          <span>□</span>
+          <span>作品</span>
+        </button>
+        <button class="nav-tab" data-view="patterns">
+          <span>Aa</span>
+          <span>織圖</span>
+        </button>
+        <button class="nav-tab" data-view="stash">
+          <span>◌</span>
+          <span>庫存</span>
+        </button>
+        <button class="nav-tab" data-view="settings">
+          <span>⚙</span>
+          <span>設定</span>
+        </button>
+      </nav>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

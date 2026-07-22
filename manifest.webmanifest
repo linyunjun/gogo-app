@@ -1,0 +1,16 @@
+{
+  "name": "針跡手帳",
+  "short_name": "針跡",
+  "description": "免費、無廣告、無追蹤的手機編織計數與文字織圖工具。",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8f4ee",
+  "theme_color": "#f8f4ee",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
