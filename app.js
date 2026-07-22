@@ -208,6 +208,7 @@ const els = {
   newToolUrl: document.querySelector("#newToolUrl"),
   addToolBtn: document.querySelector("#addToolBtn"),
   toolList: document.querySelector("#toolList"),
+  resetDataBtn: document.querySelector("#resetDataBtn"),
   toolEditModal: document.querySelector("#toolEditModal"),
   closeToolEditModal: document.querySelector("#closeToolEditModal"),
   editToolName: document.querySelector("#editToolName"),
@@ -1416,7 +1417,8 @@ function renderSettings() {
   const projectTypeSection = els.projectTypeList.closest(".settings-card");
   const commonGroupSection = els.commonGroupList.closest(".settings-card");
   const stitchSection = els.stitchEditorList.closest(".settings-card");
-  [displaySection, toolSection, brandSection, categorySection, projectTypeSection, commonGroupSection, stitchSection].forEach((section) => settingsView.append(section));
+  const resetSection = els.resetDataBtn.closest(".settings-card");
+  [displaySection, toolSection, brandSection, categorySection, projectTypeSection, commonGroupSection, stitchSection, resetSection].forEach((section) => settingsView.append(section));
 
   els.displayMode.value = state.settings.displayMode;
   els.roundLabelMode.value = state.settings.roundLabelMode;
@@ -2234,6 +2236,29 @@ els.closeStashActionModal.addEventListener("click", () => {
 els.displayMode.addEventListener("change", () => { state.settings.displayMode = els.displayMode.value; render(); });
 els.roundLabelMode.addEventListener("change", () => { state.settings.roundLabelMode = els.roundLabelMode.value; render(); });
 if (els.themeColor) els.themeColor.addEventListener("change", () => { state.settings.themeColor = els.themeColor.value; render(); });
+els.resetDataBtn.addEventListener("click", () => {
+  const firstConfirm = confirm("確定要清除這台裝置裡的所有資料嗎？\n\n作品、織圖、庫存、工具、設定都會被刪除，並回到目前 APP 的預設內容。這個動作無法復原。");
+  if (!firstConfirm) return;
+  const typed = prompt("請輸入「清除」再次確認。");
+  if (typed !== "清除") return;
+  localStorage.removeItem(STORAGE_KEY);
+  OLD_KEYS.forEach((key) => localStorage.removeItem(key));
+  state = normalizeState(structuredClone(defaultState));
+  selectedProjectId = state.projects[0]?.id ?? null;
+  selectedPatternId = state.patterns[0]?.id ?? null;
+  selectedYarnId = state.yarns[0]?.id ?? null;
+  selectedPartId = state.patterns[0]?.parts?.[0]?.id ?? null;
+  selectedToolId = state.tools[0]?.id ?? null;
+  selectedProjectIds.clear();
+  selectedPatternIds.clear();
+  selectedYarnIds.clear();
+  editingCommonGroupId = null;
+  targetSegmentForGroupId = null;
+  activeStockType = "yarn";
+  switchView("projects");
+  saveState();
+  alert("已清除資料，並回到目前預設內容。");
+});
 els.addStitchBtn.addEventListener("click", () => {
   keepScroll(() => {
     state.stitches.push({ id: crypto.randomUUID(), zh: "新針法", abbr: "new", letter: "N" });

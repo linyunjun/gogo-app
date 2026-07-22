@@ -1,4 +1,4 @@
-const CACHE_NAME = "free-knit-workbench-v32";
+const CACHE_NAME = "free-knit-workbench-v34";
 const ASSETS = [
   "./",
   "./index.html",
