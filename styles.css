@@ -690,8 +690,37 @@ textarea {
 }
 .common-group-display {
   width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
   justify-content: space-between;
   text-align: left;
+}
+.common-group-display span:nth-child(2) {
+  min-width: 0;
+}
+.common-group-display strong,
+.common-group-display small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-group-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+.picker-group-row span:nth-child(1) {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.picker-group-row strong,
+.picker-group-row small {
+  display: inline;
+}
+.picker-group-row small {
+  flex: 1;
 }
 .yarn-card { display: grid; gap: 8px; width: 100%; padding: 14px; text-align: left; }
 .yarn-card img {
@@ -703,7 +732,8 @@ textarea {
 
 .stitch-edit-card {
   display: grid;
-  grid-template-columns: 28px repeat(3, minmax(84px, 1fr)) auto;
+  grid-template-columns: 28px repeat(3, minmax(72px, 120px)) 58px;
+  justify-content: start;
   gap: 8px;
   padding: 10px;
 }
@@ -801,6 +831,30 @@ textarea {
   background: var(--paper);
   padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
 }
+.supply-deduct-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.supply-deduct-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr) 86px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  padding: 10px;
+}
+.supply-deduct-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.supply-deduct-row input {
+  text-align: center;
+}
 .toast {
   position: fixed;
   right: 16px;
@@ -862,8 +916,15 @@ textarea {
   .mobile-counter { grid-template-columns: 1fr 84px 1.25fr; }
   .secondary-action, .primary-action { min-height: 62px; font-size: 19px; }
   .stitch-number strong { font-size: 58px; }
-  .stitch-edit-card { grid-template-columns: 28px 1fr 1fr; }
-  .stitch-edit-card .delete-stitch-button { grid-column: 2 / -1; }
+  .stitch-editor-list {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .stitch-edit-card {
+    grid-template-columns: 28px repeat(3, 88px) 56px;
+    min-width: 388px;
+  }
+  .stitch-edit-card .delete-stitch-button { grid-column: auto; }
   .brand-add-row { grid-template-columns: 1fr 82px; }
   .supply-color-row { grid-template-columns: 1fr; }
   .item-editor { grid-template-columns: 28px 1fr 74px 36px; }
@@ -877,4 +938,5 @@ textarea {
   }
   .tool-add-grid, .segment-toolbar { grid-template-columns: 1fr; }
   .tool-row { align-items: flex-start; flex-direction: column; padding: 12px; }
+  .supply-deduct-row { grid-template-columns: 1fr 1fr 72px; }
 }

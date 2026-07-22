@@ -91,6 +91,10 @@
                 <div class="multi-select" id="projectYarns"></div>
               </label>
               <label>
+                使用消耗品
+                <div class="multi-select" id="projectSupplies"></div>
+              </label>
+              <label>
                 工具尺寸
                 <div class="multi-select" id="projectTools"></div>
               </label>
@@ -388,7 +392,7 @@
 
           <details class="settings-card settings-details danger-settings">
             <summary>資料管理</summary>
-            <p class="warning-text">清除後會刪除這台裝置裡的所有作品、織圖、庫存、工具與設定，並回到目前 APP 的預設內容。這個動作無法復原。</p>
+            <p class="warning-text">清除後會刪除這台裝置裡的所有作品、織圖與庫存，並回到目前 APP 內建的預設設定。這個動作無法復原。</p>
             <button class="danger-button full-width" id="resetDataBtn">清除所有資料</button>
           </details>
         </section>
@@ -512,6 +516,21 @@
             <button class="header-icon" id="closeCommonGroupPickerModal">×</button>
           </div>
           <div class="segment-list" id="commonGroupPickerList"></div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="supplyDeductModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>扣除消耗品</h2>
+            <button class="header-icon" id="closeSupplyDeductModal">×</button>
+          </div>
+          <p class="warning-text">請選擇這次作品用掉的顏色與數量。按下確認後會從庫存扣除，數量不會扣到低於 0。</p>
+          <div class="supply-deduct-list" id="supplyDeductList"></div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="skipSupplyDeductBtn">不扣除</button>
+            <button class="primary-button" id="confirmSupplyDeductBtn">確認扣除</button>
+          </div>
         </div>
       </div>
 

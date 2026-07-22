@@ -4,84 +4,39 @@ const PATTERN_SHARE_VERSION = 1;
 const DEFAULT_BRAND = "未指定";
 const DEFAULT_CATEGORY = "未分類";
 
-const DEFAULT_BRANDS = [DEFAULT_BRAND, "DMC", "Olympus", "Hamanaka", "Clover", "毛線球牧場", "小織物", "野呂英作", "Drops", "Rico Design"];
+const DEFAULT_BRANDS = [DEFAULT_BRAND, "蘇禾", "萌娃娃"];
 
 const defaultStitches = [
-  { id: "mr", zh: "魔術環", abbr: "mr", letter: "O" },
-  { id: "ch", zh: "鎖針", abbr: "ch", letter: "C" },
-  { id: "slst", zh: "引拔針", abbr: "sl st", letter: "S" },
+  { id: "ch", zh: "鎖針", abbr: "ch", letter: "ch" },
+  { id: "slst", zh: "引拔針", abbr: "sl st", letter: "sl" },
   { id: "sc", zh: "短針", abbr: "sc", letter: "X" },
-  { id: "hdc", zh: "中長針", abbr: "hdc", letter: "H" },
-  { id: "dc", zh: "長針", abbr: "dc", letter: "D" },
-  { id: "tr", zh: "長長針", abbr: "tr", letter: "TR" },
+  { id: "hdc", zh: "中長針", abbr: "hdc", letter: "T" },
+  { id: "dc", zh: "長針", abbr: "dc", letter: "F" },
+  { id: "tr", zh: "長長針", abbr: "tr", letter: "E" },
   { id: "picot", zh: "結粒針", abbr: "ch-3 picot", letter: "P" },
-  { id: "scinc", zh: "2 短針加針", abbr: "sc inc", letter: "V" },
-  { id: "sc3inc", zh: "3 短針加針", abbr: "sc3inc", letter: "W" },
-  { id: "hdcinc", zh: "2 中長針加針", abbr: "hdc inc", letter: "HV" }
+  { id: "scinc", zh: "兩針短針加針", abbr: "sc inc", letter: "XV" },
+  { id: "sc3inc", zh: "三針短針加針", abbr: "sc3inc", letter: "XW" },
+  { id: "hdcinc", zh: "兩針中長針加針", abbr: "hdc inc", letter: "TV" },
+  { id: "01065c92-b8b8-4a32-abdf-43faa5e18377", zh: "三針中長針加針", abbr: "hdc3inc", letter: "TW" },
+  { id: "55e38d91-c10f-404d-a6ec-96d9f93b5691", zh: "兩針長針加針", abbr: "dc inc", letter: "FV" },
+  { id: "3b63bf9c-6e47-4c81-9eb3-e59c4124a70b", zh: "三針長針加針", abbr: "dc3inc", letter: "FW" },
+  { id: "5043b9d9-c6e8-4838-ab08-6d6fd0f76a06", zh: "兩針短針減針", abbr: "new", letter: "A" },
+  { id: "c887faf7-295f-4c0c-807b-b0c40f76ebef", zh: "三針短針減針", abbr: "new", letter: "M" }
 ];
 
-const defaultPatternId = crypto.randomUUID();
-const defaultProjectId = crypto.randomUUID();
-const defaultYarnId = crypto.randomUUID();
-const defaultToolId = crypto.randomUUID();
-
 const defaultState = {
-  settings: { displayMode: "abbr", roundLabelMode: "r", themeColor: "rose", projectSort: "pinned-desc", patternSort: "pinned-desc" },
+  settings: { displayMode: "letter", roundLabelMode: "r", themeColor: "honey", projectSort: "type-asc", patternSort: "pinned-desc" },
   brands: structuredClone(DEFAULT_BRANDS),
-  categories: [DEFAULT_CATEGORY],
-  projectTypes: ["包包", "娃娃", "衣物", "配件", "其他"],
+  categories: [DEFAULT_CATEGORY, "4股", "5股", "手混線"],
+  projectTypes: ["包包", "娃娃", "娃衣", "髮飾", "杯墊"],
   commonGroups: [
-    { id: crypto.randomUUID(), name: "短針組", items: [{ stitchId: "sc" }, { stitchId: "sc" }] },
-    { id: crypto.randomUUID(), name: "加針組", items: [{ stitchId: "sc" }, { stitchId: "scinc" }] }
+    { id: "de0461b2-46d1-4186-92af-630725c8629f", name: "短針一圈", items: [{ stitchId: "ch" }, { stitchId: "sc" }] }
   ],
-  tools: [{ id: defaultToolId, name: "4.0 mm 鉤針", brand: "", url: "" }],
+  tools: [{ id: "b375e2c8-42a8-4503-aeba-71bc458d2f43", name: "2.0 mm 鉤針", brand: "金嵐", url: "" }],
   stitches: structuredClone(defaultStitches),
-  patterns: [
-    {
-      id: defaultPatternId,
-      name: "圍巾臘腸狗",
-      source: "",
-      images: [],
-      yarnIds: [defaultYarnId],
-      toolIds: [defaultToolId],
-      parts: [
-        {
-          id: crypto.randomUUID(),
-          name: "身體",
-          notes: "",
-          segments: [
-            { id: crypto.randomUUID(), repeat: 1, note: "起針", items: [{ stitchId: "mr", count: 1 }, { stitchId: "sc", count: 6 }] },
-            { id: crypto.randomUUID(), repeat: 2, note: "逐圈加針", items: [{ stitchId: "sc", count: 6 }, { stitchId: "scinc", count: 6 }] },
-            { id: crypto.randomUUID(), repeat: 7, note: "不加不減", items: [{ stitchId: "sc", count: 24 }] }
-          ]
-        }
-      ],
-      groups: [
-        { id: crypto.randomUUID(), name: "短針一圈", items: [{ stitchId: "sc", count: 24 }] },
-        { id: crypto.randomUUID(), name: "短針加針組", items: [{ stitchId: "sc", count: 1 }, { stitchId: "scinc", count: 1 }] }
-      ]
-    }
-  ],
-  projects: [
-    {
-      id: defaultProjectId,
-      name: "圍巾臘腸狗",
-      type: "鉤針",
-      status: "進行中",
-      yarnIds: [defaultYarnId],
-      needle: "4.0 mm 鉤針",
-      notes: "",
-      image: "",
-      patternIds: [defaultPatternId],
-      activePatternId: defaultPatternId,
-      progress: {
-        [defaultPatternId]: { completedRounds: 0, currentRound: 1, currentStitch: 1, completed: false }
-      }
-    }
-  ],
-  yarns: [
-    { id: defaultYarnId, stockType: "yarn", colorName: "奶茶", brand: "未指定", category: "未分類", lot: "A01", amount: 3, weight: 50, url: "", image: "", supplyColors: [], notes: "" }
-  ]
+  patterns: [],
+  projects: [],
+  yarns: []
 };
 
 let state = loadState();
@@ -127,6 +82,7 @@ const els = {
   projectType: document.querySelector("#projectType"),
   projectPatternSelect: document.querySelector("#projectPatternSelect"),
   projectYarns: document.querySelector("#projectYarns"),
+  projectSupplies: document.querySelector("#projectSupplies"),
   projectTools: document.querySelector("#projectTools"),
   projectNotes: document.querySelector("#projectNotes"),
   deleteProjectBtn: document.querySelector("#deleteProjectBtn"),
@@ -225,6 +181,11 @@ const els = {
   commonGroupPickerModal: document.querySelector("#commonGroupPickerModal"),
   closeCommonGroupPickerModal: document.querySelector("#closeCommonGroupPickerModal"),
   commonGroupPickerList: document.querySelector("#commonGroupPickerList"),
+  supplyDeductModal: document.querySelector("#supplyDeductModal"),
+  closeSupplyDeductModal: document.querySelector("#closeSupplyDeductModal"),
+  supplyDeductList: document.querySelector("#supplyDeductList"),
+  skipSupplyDeductBtn: document.querySelector("#skipSupplyDeductBtn"),
+  confirmSupplyDeductBtn: document.querySelector("#confirmSupplyDeductBtn"),
   patternActionModal: document.querySelector("#patternActionModal"),
   closePatternActionModal: document.querySelector("#closePatternActionModal"),
   patternActionTitle: document.querySelector("#patternActionTitle"),
@@ -328,7 +289,7 @@ function normalizeState(input) {
     commonGroups: Array.isArray(input.commonGroups) ? input.commonGroups : structuredClone(defaultState.commonGroups),
     tools: Array.isArray(input.tools) ? input.tools : structuredClone(defaultState.tools),
     stitches: Array.isArray(input.stitches) && input.stitches.length ? input.stitches : structuredClone(defaultStitches),
-    patterns: Array.isArray(input.patterns) && input.patterns.length ? input.patterns : structuredClone(defaultState.patterns),
+    patterns: Array.isArray(input.patterns) ? input.patterns : structuredClone(defaultState.patterns),
     projects: Array.isArray(input.projects) ? input.projects : structuredClone(defaultState.projects),
     yarns: Array.isArray(input.yarns) ? input.yarns : structuredClone(defaultState.yarns)
   };
@@ -342,6 +303,9 @@ function normalizeState(input) {
     createdAt: pattern.createdAt || new Date().toISOString(),
     updatedAt: pattern.updatedAt || pattern.createdAt || new Date().toISOString(),
     pinned: Boolean(pattern.pinned),
+    isProjectCopy: Boolean(pattern.isProjectCopy),
+    sourcePatternId: pattern.sourcePatternId || "",
+    importKey: pattern.importKey || "",
     source: pattern.source || "",
     images: Array.isArray(pattern.images) ? pattern.images : [],
     yarnIds: Array.isArray(pattern.yarnIds) ? pattern.yarnIds : [],
@@ -388,6 +352,19 @@ function normalizeState(input) {
       activePatternId: project.activePatternId && singlePatternIds.includes(project.activePatternId) ? project.activePatternId : singlePatternIds[0] || "",
       progress
     };
+  });
+
+  const templateById = new Map(next.patterns.filter((pattern) => !pattern.isProjectCopy).map((pattern) => [pattern.id, pattern]));
+  next.projects.forEach((project) => {
+    (project.patternIds || []).forEach((patternId) => {
+      const projectPattern = next.patterns.find((pattern) => pattern.id === patternId);
+      if (!projectPattern || projectPattern.isProjectCopy) return;
+      const matchingTemplate = [...templateById.values()].find((pattern) => pattern.id !== projectPattern.id && stablePatternKey(pattern) === stablePatternKey(projectPattern));
+      if (!matchingTemplate) return;
+      projectPattern.isProjectCopy = true;
+      projectPattern.sourcePatternId = matchingTemplate.id;
+      projectPattern.pinned = false;
+    });
   });
 
   next.stitches = next.stitches.map((stitch) => ({
@@ -753,6 +730,11 @@ function selectedYarnsForAction() {
   return state.yarns.filter((yarn) => ids.has(yarn.id));
 }
 
+function nextStockName(type) {
+  const count = state.yarns.filter((item) => (item.stockType || "yarn") === type).length + 1;
+  return type === "supply" ? `新消耗品 ${count}` : `新顏色 ${count}`;
+}
+
 function updateStashActionSheet() {
   const selected = selectedYarnsForAction();
   els.stashActionTitle.textContent = selected.length ? `已選 ${selected.length} 個庫存 · 可繼續點選` : "庫存選項";
@@ -774,6 +756,7 @@ function cleanPatternForShare(pattern) {
   delete copy.pinned;
   delete copy.isProjectCopy;
   delete copy.sourcePatternId;
+  delete copy.importKey;
   return copy;
 }
 
@@ -794,13 +777,33 @@ function decodeSharePayload(value) {
   return JSON.parse(decodeURIComponent(value));
 }
 
+function stablePatternKey(pattern) {
+  const scrub = (value) => {
+    if (Array.isArray(value)) return value.map(scrub);
+    if (!value || typeof value !== "object") return value;
+    return Object.keys(value).sort().reduce((result, key) => {
+      if (["id", "createdAt", "updatedAt", "pinned", "isProjectCopy", "sourcePatternId", "importKey"].includes(key)) return result;
+      result[key] = scrub(value[key]);
+      return result;
+    }, {});
+  };
+  return JSON.stringify(scrub(pattern));
+}
+
 function importPatternPackage(payload) {
   const pattern = payload?.type === "gogo-pattern" ? payload.pattern : payload?.pattern || payload;
   if (!pattern || typeof pattern !== "object") throw new Error("不是可匯入的織圖檔");
+  const importKey = stablePatternKey(pattern);
+  const existing = templatePatterns().find((item) => item.importKey === importKey);
+  if (existing) {
+    selectedPatternId = existing.id;
+    return existing;
+  }
   const normalized = normalizeState({ ...state, patterns: [pattern] }).patterns[0];
   normalized.id = crypto.randomUUID();
   normalized.name = uniquePatternName(normalized.name);
   normalized.pinned = false;
+  normalized.importKey = importKey;
   delete normalized.isProjectCopy;
   delete normalized.sourcePatternId;
   state.patterns.unshift(normalized);
@@ -901,13 +904,14 @@ function checkSharedPatternFromUrl() {
     const name = payload?.pattern?.name || "分享織圖";
     if (confirm(`要匯入「${name}」到自己的織圖庫嗎？`)) {
       const pattern = importPatternPackage(payload);
-      history.replaceState(null, "", location.pathname + location.search);
       selectedPatternId = pattern.id;
       switchView("patternEdit");
       alert("已匯入織圖。");
     }
   } catch {
     alert("這個分享連結無法匯入。");
+  } finally {
+    history.replaceState(null, "", location.pathname + location.search);
   }
 }
 
@@ -919,13 +923,14 @@ function checkSharedStashFromUrl() {
     const count = payload?.items?.length || 0;
     if (confirm(`要匯入 ${count} 個庫存項目到自己的庫存嗎？`)) {
       const imported = importStashPackage(payload);
-      history.replaceState(null, "", location.pathname + location.search);
       activeStockType = imported[0]?.stockType || "yarn";
       switchView("stash");
       alert("已匯入庫存。");
     }
   } catch {
     alert("這個庫存分享連結無法匯入。");
+  } finally {
+    history.replaceState(null, "", location.pathname + location.search);
   }
 }
 
@@ -1064,6 +1069,7 @@ function renderDetail() {
   const activePattern = state.patterns.find((pattern) => pattern.id === project.activePatternId);
   els.projectPatternSelect.value = activePattern?.sourcePatternId || activePattern?.id || "";
   renderMultiSelect(els.projectYarns, state.yarns.filter((yarn) => (yarn.stockType || "yarn") === "yarn").map((yarn) => ({ value: yarn.id, label: stockLabel(yarn) })), project.yarnIds || [], (values) => { project.yarnIds = values; project.updatedAt = new Date().toISOString(); saveState(); }, "搜尋線材");
+  renderMultiSelect(els.projectSupplies, state.yarns.filter((yarn) => (yarn.stockType || "yarn") === "supply").map((supply) => ({ value: supply.id, label: stockLabel(supply) })), project.supplyIds || [], (values) => { project.supplyIds = values; project.updatedAt = new Date().toISOString(); saveState(); }, "搜尋消耗品");
   renderMultiSelect(els.projectTools, state.tools.map((tool) => ({ value: tool.id, label: tool.brand ? `${tool.brand} · ${tool.name}` : tool.name })), project.toolIds || [], (values) => { project.toolIds = values; project.updatedAt = new Date().toISOString(); saveState(); }, "搜尋工具");
 
   els.attachedPatternList.innerHTML = "";
@@ -1071,7 +1077,7 @@ function renderDetail() {
   if (!pattern) return;
   const itemProgress = patternProgress(project, pattern);
   const patternToolNames = (pattern.toolIds || []).map((id) => state.tools.find((tool) => tool.id === id)?.name).filter(Boolean);
-  const patternSupplyNames = (pattern.supplyIds || []).map((id) => state.yarns.find((item) => item.id === id)?.colorName).filter(Boolean);
+  const projectSupplyNames = (project.supplyIds || []).map((id) => state.yarns.find((item) => item.id === id)?.colorName).filter(Boolean);
   const card = document.createElement("article");
   card.className = "attached-card";
   card.innerHTML = `
@@ -1079,7 +1085,7 @@ function renderDetail() {
       <strong>${escapeHtml(pattern.name)}</strong>
     </div>
     <p>${pattern.source ? escapeHtml(pattern.source) : "無來源"}</p>
-    <p>${patternToolNames.length ? escapeHtml(patternToolNames.join("、")) : "未指定工具"}${patternSupplyNames.length ? ` · ${escapeHtml(patternSupplyNames.join("、"))}` : ""}</p>
+    <p>${patternToolNames.length ? escapeHtml(patternToolNames.join("、")) : "未指定工具"}${projectSupplyNames.length ? ` · ${escapeHtml(projectSupplyNames.join("、"))}` : ""}</p>
     <p>進度：第 ${itemProgress.done} / ${itemProgress.total} 段 (${itemProgress.percent}%)</p>
     <div class="part-link-list">
       ${pattern.parts.map((part) => `<button class="part-link" data-track-part="${part.id}">${escapeHtml(part.name)}<span>${escapeHtml(formatRoundRange(part.segments.reduce((sum, segment) => sum + Number(segment.repeat || 1), 0)))}</span></button>`).join("")}
@@ -1142,7 +1148,12 @@ function renderTracking() {
 function renderPatterns() {
   els.patternList.innerHTML = "";
   els.patternSort.value = normalizePatternSortMode(state.settings.patternSort);
-  sortedTemplatePatterns().forEach((pattern) => {
+  const patterns = sortedTemplatePatterns();
+  if (!patterns.length) {
+    els.patternList.innerHTML = `<p class="empty-note">尚無織圖，按右上角「新增」建立第一個織圖。</p>`;
+    return;
+  }
+  patterns.forEach((pattern) => {
     const rows = expandedRows(pattern);
     const card = document.createElement("button");
     card.className = `pattern-library-card ${pattern.pinned ? "pinned-card" : ""} ${selectedPatternIds.has(pattern.id) ? "selected-card" : ""}`;
@@ -1448,7 +1459,7 @@ function renderSettings() {
     row.className = "brand-row";
     row.draggable = true;
     row.dataset.brandRow = brand;
-    row.innerHTML = `<span class="drag-handle settings-drag-handle">☰</span><strong>${escapeHtml(brand)}</strong><button class="text-button" data-remove-brand="${escapeHtml(brand)}">刪除</button>`;
+    row.innerHTML = `<span class="drag-handle settings-drag-handle">☰</span><input value="${escapeHtml(brand)}" data-brand-name="${escapeHtml(brand)}" aria-label="線材品牌"><button class="text-button" data-remove-brand="${escapeHtml(brand)}">刪除</button>`;
     els.brandList.append(row);
   });
   els.categoryList.innerHTML = "";
@@ -1601,9 +1612,8 @@ function moveCommonGroupItem(sourceIndexText, targetIndexText) {
 function openCommonGroupPicker(segmentId) {
   targetSegmentForGroupId = segmentId;
   els.commonGroupPickerList.innerHTML = state.commonGroups.length ? state.commonGroups.map((group) => `
-    <button class="tool-row common-group-display" data-pick-common-group="${group.id}">
+    <button class="tool-row common-group-display picker-group-row" data-pick-common-group="${group.id}">
       <span><strong>${escapeHtml(group.name)}</strong><small>${escapeHtml(groupDisplay(group))}</small></span>
-      <span class="segment-total">加入</span>
     </button>
   `).join("") : `<p class="empty-note">尚未在設定新增常用群組。</p>`;
   els.commonGroupPickerModal.classList.remove("hidden");
@@ -1638,6 +1648,57 @@ function addCommonGroupToSegment(segmentId) {
     return;
   }
   openCommonGroupPicker(segmentId);
+}
+
+function projectSupplyItems(project = currentProject()) {
+  const ids = new Set(project?.supplyIds || []);
+  return [...ids]
+    .map((id) => state.yarns.find((item) => item.id === id && (item.stockType || "yarn") === "supply"))
+    .filter(Boolean);
+}
+
+function closeSupplyDeductModal() {
+  els.supplyDeductModal.classList.add("hidden");
+}
+
+function finishCurrentPattern(pattern) {
+  closeSupplyDeductModal();
+  saveState();
+  showFinishToast(pattern.name);
+}
+
+function openSupplyDeductModal(pattern) {
+  const supplies = projectSupplyItems(currentProject());
+  if (!supplies.length) {
+    finishCurrentPattern(pattern);
+    return;
+  }
+  els.supplyDeductList.innerHTML = supplies.map((supply) => {
+    const colors = Array.isArray(supply.supplyColors) ? supply.supplyColors : [];
+    const options = colors.length
+      ? colors.map((color, index) => `<option value="${index}">${escapeHtml(color.name || `顏色 ${index + 1}`)}（剩 ${Number(color.amount || 0)}）</option>`).join("")
+      : `<option value="">尚無顏色</option>`;
+    return `
+      <article class="supply-deduct-row" data-deduct-supply="${supply.id}">
+        <strong>${escapeHtml(supply.colorName)}</strong>
+        <select data-deduct-color ${colors.length ? "" : "disabled"}>${options}</select>
+        <input data-deduct-amount type="number" min="0" step="1" value="0" inputmode="numeric" ${colors.length ? "" : "disabled"} />
+      </article>
+    `;
+  }).join("");
+  els.supplyDeductModal.classList.remove("hidden");
+}
+
+function applySupplyDeductions() {
+  els.supplyDeductList.querySelectorAll("[data-deduct-supply]").forEach((row) => {
+    const supply = state.yarns.find((item) => item.id === row.dataset.deductSupply);
+    const colorIndex = Number(row.querySelector("[data-deduct-color]")?.value);
+    const amount = Math.max(0, Number(row.querySelector("[data-deduct-amount]")?.value || 0));
+    const color = supply?.supplyColors?.[colorIndex];
+    if (!color || !amount) return;
+    color.amount = Math.max(0, Number(color.amount || 0) - amount);
+    supply.amount = (supply.supplyColors || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  });
 }
 
 function switchView(view) {
@@ -1895,7 +1956,7 @@ els.completeRoundBtn.addEventListener("click", () => {
     progress.completed = true;
     currentProject().status = "已完成";
     saveState();
-    showFinishToast(pattern.name);
+    openSupplyDeductModal(pattern);
   } else {
     render();
   }
@@ -2121,7 +2182,7 @@ els.patternImages.addEventListener("click", (event) => {
 });
 
 els.newYarnBtn.addEventListener("click", () => {
-  const yarn = { id: crypto.randomUUID(), stockType: activeStockType, colorName: activeStockType === "yarn" ? `新顏色 ${state.yarns.length + 1}` : `新消耗品 ${state.yarns.length + 1}`, brand: "未指定", category: "未分類", lot: "", amount: 1, weight: 0, url: "", image: "", supplyColors: [], notes: "" };
+  const yarn = { id: crypto.randomUUID(), stockType: activeStockType, colorName: nextStockName(activeStockType), brand: "未指定", category: "未分類", lot: "", amount: 1, weight: 0, url: "", image: "", supplyColors: [], notes: "" };
   state.yarns.unshift(yarn);
   selectedYarnId = yarn.id;
   switchView("yarnEdit");
@@ -2237,7 +2298,7 @@ els.displayMode.addEventListener("change", () => { state.settings.displayMode = 
 els.roundLabelMode.addEventListener("change", () => { state.settings.roundLabelMode = els.roundLabelMode.value; render(); });
 if (els.themeColor) els.themeColor.addEventListener("change", () => { state.settings.themeColor = els.themeColor.value; render(); });
 els.resetDataBtn.addEventListener("click", () => {
-  const firstConfirm = confirm("確定要清除這台裝置裡的所有資料嗎？\n\n作品、織圖、庫存、工具、設定都會被刪除，並回到目前 APP 的預設內容。這個動作無法復原。");
+  const firstConfirm = confirm("確定要清除這台裝置裡的作品、織圖與庫存嗎？\n\n清除後會回到目前 APP 內建的預設設定。這個動作無法復原。");
   if (!firstConfirm) return;
   const typed = prompt("請輸入「清除」再次確認。");
   if (typed !== "清除") return;
@@ -2257,7 +2318,7 @@ els.resetDataBtn.addEventListener("click", () => {
   activeStockType = "yarn";
   switchView("projects");
   saveState();
-  alert("已清除資料，並回到目前預設內容。");
+  alert("已清除作品、織圖與庫存，並回到內建預設設定。");
 });
 els.addStitchBtn.addEventListener("click", () => {
   keepScroll(() => {
@@ -2284,6 +2345,26 @@ els.brandList.addEventListener("click", (event) => {
     });
     render();
   });
+});
+els.brandList.addEventListener("change", (event) => {
+  const oldName = event.target.dataset.brandName;
+  const newName = event.target.value.trim();
+  if (!oldName || oldName === DEFAULT_BRAND) return;
+  if (!newName) {
+    event.target.value = oldName;
+    return;
+  }
+  if (state.brands.includes(newName) && newName !== oldName) {
+    alert("已有同名品牌。");
+    event.target.value = oldName;
+    return;
+  }
+  state.brands = state.brands.map((brand) => brand === oldName ? newName : brand);
+  state.yarns.forEach((yarn) => {
+    if (yarn.brand === oldName) yarn.brand = newName;
+  });
+  saveState();
+  render();
 });
 els.brandList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-brand-row]");
@@ -2485,6 +2566,12 @@ els.commonGroupPickerList.addEventListener("click", (event) => {
   if (groupId) insertCommonGroupIntoSegment(groupId);
 });
 els.closeCommonGroupPickerModal.addEventListener("click", closeCommonGroupPicker);
+els.closeSupplyDeductModal.addEventListener("click", () => finishCurrentPattern(currentPattern()));
+els.skipSupplyDeductBtn.addEventListener("click", () => finishCurrentPattern(currentPattern()));
+els.confirmSupplyDeductBtn.addEventListener("click", () => {
+  applySupplyDeductions();
+  finishCurrentPattern(currentPattern());
+});
 els.addToolBtn.addEventListener("click", () => {
   const name = els.newToolName.value.trim();
   if (!name) return;
