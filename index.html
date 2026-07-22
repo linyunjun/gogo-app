@@ -12,28 +12,39 @@
     <div class="app-shell">
       <header class="app-header">
         <button class="header-icon hidden" id="backBtn" aria-label="返回">‹</button>
-        <div class="header-title">
-          <h1 id="screenTitle">作品</h1>
-        </div>
-        <div class="header-actions">
-          <button class="icon-button" id="exportBtn" title="匯出資料" aria-label="匯出資料">↓</button>
-          <label class="icon-button import-button" title="匯入資料" aria-label="匯入資料">
-            ↑
-            <input id="importInput" type="file" accept="application/json" />
-          </label>
-        </div>
+        <div></div>
+        <div></div>
       </header>
 
       <main class="workspace">
         <section class="view active" id="projectsView">
           <div class="section-header">
             <h2>我的作品</h2>
-            <button class="primary-button compact" id="newProjectBtn">+ 新增</button>
+            <div class="inline-actions">
+              <select class="sort-menu" id="projectSort" aria-label="作品排序">
+                <option value="pinned-desc">置頂優先</option>
+                <option value="pinned-asc">置頂最後</option>
+                <option value="progress-desc">完成度高</option>
+                <option value="progress-asc">完成度低</option>
+                <option value="type-asc">類型 A-Z</option>
+                <option value="type-desc">類型 Z-A</option>
+                <option value="updated-desc">最近更新</option>
+                <option value="updated-asc">最早更新</option>
+                <option value="name-asc">名稱 A-Z</option>
+                <option value="name-desc">名稱 Z-A</option>
+                <option value="pattern-asc">織圖 A-Z</option>
+                <option value="pattern-desc">織圖 Z-A</option>
+              </select>
+              <button class="primary-button compact" id="newProjectBtn">+ 新增</button>
+            </div>
           </div>
           <div class="project-list" id="projectList"></div>
         </section>
 
         <section class="view" id="detailView">
+          <div class="section-header">
+            <h2>作品詳情</h2>
+          </div>
           <article class="detail-hero">
             <label class="photo-picker large" id="projectPhotoPicker">
               <input id="projectPhotoInput" type="file" accept="image/*" />
@@ -50,21 +61,6 @@
               <p id="detailProgressText">尚未開始</p>
             </div>
           </article>
-
-          <section class="info-card">
-            <div class="info-row">
-              <span>狀態</span>
-              <strong id="detailStatus">進行中</strong>
-            </div>
-            <div class="info-row">
-              <span>線材</span>
-              <strong id="detailYarn">未綁定</strong>
-            </div>
-            <div class="info-row">
-              <span>工具</span>
-              <strong id="detailNeedle">未填寫</strong>
-            </div>
-          </section>
 
           <section class="section-header inline">
             <h2>織圖</h2>
@@ -84,14 +80,6 @@
                   <option>鉤針</option>
                   <option>棒針</option>
                   <option>混合</option>
-                </select>
-              </label>
-              <label>
-                狀態
-                <select id="projectStatus">
-                  <option>進行中</option>
-                  <option>暫停</option>
-                  <option>已完成</option>
                 </select>
               </label>
               <label>
@@ -150,7 +138,21 @@
         <section class="view" id="patternsView">
           <div class="section-header">
             <h2>織圖庫</h2>
-            <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
+            <div class="inline-actions">
+              <select class="sort-menu" id="patternSort" aria-label="織圖排序">
+                <option value="pinned-desc">置頂優先</option>
+                <option value="pinned-asc">置頂最後</option>
+                <option value="updated-desc">最近更新</option>
+                <option value="updated-asc">最早更新</option>
+                <option value="name-asc">名稱 A-Z</option>
+                <option value="name-desc">名稱 Z-A</option>
+                <option value="rounds-desc">段數多</option>
+                <option value="rounds-asc">段數少</option>
+              </select>
+              <button class="outline-button compact" id="importPatternBtn">匯入</button>
+              <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
+              <input class="hidden" id="patternImportInput" type="file" accept="application/json,.json,.gogopattern" />
+            </div>
           </div>
           <div class="pattern-list" id="patternList"></div>
         </section>
@@ -170,8 +172,8 @@
               <input id="patternName" />
             </label>
             <label>
-              來源 / 連結
-              <input id="patternSource" placeholder="可貼原作者網址或購買來源" />
+              參考連結
+              <input id="patternSource" />
             </label>
             <label>
               使用線材
@@ -217,7 +219,6 @@
               <textarea id="partNotes" rows="2"></textarea>
             </label>
             <div class="segment-toolbar">
-              <button class="outline-button" id="addGroupBtn">+ 新增群組</button>
               <button class="primary-button" id="addSegmentBtn">+ 新增段落</button>
             </div>
             <div class="segment-list" id="partSegmentList"></div>
@@ -289,7 +290,7 @@
             <section class="wide-field supply-colors" id="supplyColorsSection">
               <div class="section-header inline">
                 <h2>顏色</h2>
-                <button class="primary-button compact" id="addSupplyColorBtn" type="button">新增顏色</button>
+                <button class="primary-button compact" id="addSupplyColorBtn" type="button">+ 新增顏色</button>
               </div>
               <div class="segment-list" id="supplyColorList"></div>
             </section>
@@ -301,13 +302,13 @@
             <h2>設定</h2>
           </div>
 
-          <section class="settings-card open-card">
+          <details class="settings-card settings-details">
+            <summary>偏好設定</summary>
             <label>
               計數時顯示
               <select id="displayMode">
                 <option value="abbr">美式英文縮寫</option>
                 <option value="zh">中文</option>
-                <option value="symbol">符號</option>
                 <option value="letter">簡計</option>
               </select>
             </label>
@@ -325,72 +326,65 @@
                 <option value="sage">鼠尾草綠</option>
                 <option value="sky">天空藍</option>
                 <option value="plum">莓果紫</option>
+                <option value="honey">蜂蜜杏</option>
                 <option value="charcoal">石墨灰</option>
               </select>
             </label>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>自訂針法</h2>
+          <details class="settings-card settings-details">
+            <summary>針法</summary>
+            <div class="settings-action-row">
               <button class="primary-button compact" id="addStitchBtn">+ 新增</button>
             </div>
             <div class="stitch-editor-list" id="stitchEditorList"></div>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>線材品牌</h2>
-            </div>
+          <details class="settings-card settings-details">
+            <summary>線材品牌</summary>
             <div class="brand-add-row">
               <input id="newBrandName" placeholder="新增品牌名稱" />
-              <button class="primary-button compact" id="addBrandBtn">新增</button>
+              <button class="primary-button compact" id="addBrandBtn">+ 新增</button>
             </div>
             <div class="brand-list" id="brandList"></div>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>庫存分類</h2>
-            </div>
+          <details class="settings-card settings-details">
+            <summary>線材分類</summary>
             <div class="brand-add-row">
               <input id="newCategoryName" placeholder="新增分類名稱" />
-              <button class="primary-button compact" id="addCategoryBtn">新增</button>
+              <button class="primary-button compact" id="addCategoryBtn">+ 新增</button>
             </div>
             <div class="brand-list" id="categoryList"></div>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>作品類型</h2>
-            </div>
+          <details class="settings-card settings-details">
+            <summary>作品類型</summary>
             <div class="brand-add-row">
-              <input id="newProjectTypeName" placeholder="新增類型，例如 包包、娃娃" />
-              <button class="primary-button compact" id="addProjectTypeBtn">新增</button>
+              <input id="newProjectTypeName" placeholder="新增類型名稱" />
+              <button class="primary-button compact" id="addProjectTypeBtn">+ 新增</button>
             </div>
             <div class="brand-list" id="projectTypeList"></div>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>常用群組</h2>
-              <button class="primary-button compact" id="addCommonGroupBtn">新增</button>
+          <details class="settings-card settings-details">
+            <summary>常用群組</summary>
+            <div class="settings-action-row">
+              <button class="primary-button compact" id="addCommonGroupBtn">+ 新增</button>
             </div>
             <div class="segment-list" id="commonGroupList"></div>
-          </section>
+          </details>
 
-          <section class="settings-card open-card">
-            <div class="section-header inline">
-              <h2>工具</h2>
-            </div>
+          <details class="settings-card settings-details">
+            <summary>工具</summary>
             <div class="tool-add-grid">
-              <input id="newToolName" placeholder="工具名稱，例如 4.0 mm 鉤針" />
-              <input id="newToolBrand" placeholder="品牌，可留空" />
-              <input id="newToolUrl" placeholder="購買網址，可留空" />
-              <button class="primary-button compact" id="addToolBtn">新增</button>
+              <input id="newToolName" placeholder="工具名稱" />
+              <input id="newToolBrand" placeholder="品牌" />
+              <input id="newToolUrl" placeholder="購買網址" />
+              <button class="primary-button compact" id="addToolBtn">+ 新增</button>
             </div>
             <div class="tool-list" id="toolList"></div>
-          </section>
+          </details>
         </section>
       </main>
 
@@ -421,7 +415,7 @@
         </div>
       </div>
 
-      <div class="modal hidden" id="patternActionModal">
+      <div class="modal floating-action-modal hidden" id="patternActionModal">
         <div class="modal-sheet">
           <div class="section-header">
             <h2 id="patternActionTitle">織圖選項</h2>
@@ -429,12 +423,13 @@
           </div>
           <div class="button-row modal-actions">
             <button class="outline-button" id="pinPatternBtn">置頂</button>
+            <button class="outline-button" id="sharePatternBtn">分享</button>
             <button class="danger-button" id="deletePatternFromListBtn">刪除</button>
           </div>
         </div>
       </div>
 
-      <div class="modal hidden" id="projectActionModal">
+      <div class="modal floating-action-modal hidden" id="projectActionModal">
         <div class="modal-sheet">
           <div class="section-header">
             <h2 id="projectActionTitle">作品選項</h2>
@@ -443,6 +438,20 @@
           <div class="button-row modal-actions">
             <button class="outline-button" id="pinProjectBtn">置頂</button>
             <button class="danger-button" id="deleteProjectFromListBtn">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal floating-action-modal hidden" id="stashActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="stashActionTitle">庫存選項</h2>
+            <button class="header-icon" id="closeStashActionModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="pinStashBtn">置頂</button>
+            <button class="outline-button" id="shareStashBtn">分享</button>
+            <button class="danger-button" id="deleteStashFromListBtn">刪除</button>
           </div>
         </div>
       </div>
@@ -468,6 +477,35 @@
             </label>
           </div>
           <button class="danger-button full-width" id="deleteToolBtn">刪除此工具</button>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="commonGroupEditModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>編輯群組</h2>
+            <button class="header-icon" id="closeCommonGroupEditModal">×</button>
+          </div>
+          <label>
+            群組名稱
+            <input id="commonGroupNameInput" autocomplete="off" />
+          </label>
+          <div class="segment-list" id="commonGroupItemList"></div>
+          <button class="outline-button full-width" id="addCommonGroupItemBtn">+ 新增針法</button>
+          <div class="button-row modal-actions">
+            <button class="primary-button" id="saveCommonGroupBtn">完成</button>
+            <button class="danger-button" id="deleteCommonGroupBtn">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="commonGroupPickerModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>選擇群組</h2>
+            <button class="header-icon" id="closeCommonGroupPickerModal">×</button>
+          </div>
+          <div class="segment-list" id="commonGroupPickerList"></div>
         </div>
       </div>
 
