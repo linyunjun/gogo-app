@@ -4894,6 +4894,7 @@ async function forceAppUpdate() {
 document.querySelectorAll(".modal").forEach((modal) => {
   modal.addEventListener("click", (event) => {
     if (event.target !== modal) return;
+    if (["projectActionModal", "patternActionModal", "stashActionModal", "folderActionModal"].includes(modal.id)) return;
     const closeButton = modal.querySelector(".header-icon[id^='close']");
     if (closeButton) {
       closeButton.click();
