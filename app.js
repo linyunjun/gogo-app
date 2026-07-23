@@ -1101,7 +1101,12 @@ const defaultData = {
       "zh": "棗形針",
       "letter": "Q"
     }
-  ]
+  ],
+  "brandWeights": {
+    "未指定": 0,
+    "萌娃娃 4股": 0,
+    "蘇禾 4股": 0
+  }
 };
 
 const DEFAULT_BRANDS = defaultData.brands;
@@ -1110,6 +1115,7 @@ const defaultStitches = defaultData.stitches;
 const defaultState = {
   settings: structuredClone(defaultData.settings),
   brands: structuredClone(defaultData.brands),
+  brandWeights: structuredClone(defaultData.brandWeights || {}),
   brandCards: structuredClone(defaultData.brandCards),
   projectTypes: structuredClone(defaultData.projectTypes),
   commonGroups: structuredClone(defaultData.commonGroups),
@@ -1132,6 +1138,10 @@ function fullBrandCategoryName(name, category) {
   const cleanCategory = category.trim();
   if (!cleanName || cleanName === DEFAULT_BRAND) return DEFAULT_BRAND;
   return cleanCategory ? `${cleanName} ${cleanCategory}` : cleanName;
+}
+
+function brandWeight(brand) {
+  return Number(state?.brandWeights?.[brand] || 0);
 }
 
 let state = loadState();
@@ -1261,7 +1271,6 @@ const els = {
   addStitchBtn: document.querySelector("#addStitchBtn"),
   stitchEditorList: document.querySelector("#stitchEditorList"),
   newBrandName: document.querySelector("#newBrandName"),
-  newBrandCategory: document.querySelector("#newBrandCategory"),
   addBrandBtn: document.querySelector("#addBrandBtn"),
   brandList: document.querySelector("#brandList"),
   newProjectTypeName: document.querySelector("#newProjectTypeName"),
@@ -1288,6 +1297,8 @@ const els = {
   brandCardModal: document.querySelector("#brandCardModal"),
   closeBrandCardModal: document.querySelector("#closeBrandCardModal"),
   brandCardTitle: document.querySelector("#brandCardTitle"),
+  brandCardCategory: document.querySelector("#brandCardCategory"),
+  brandCardWeight: document.querySelector("#brandCardWeight"),
   brandCardColorName: document.querySelector("#brandCardColorName"),
   brandCardLot: document.querySelector("#brandCardLot"),
   brandCardImageInput: document.querySelector("#brandCardImageInput"),
@@ -1370,6 +1381,7 @@ const els = {
   colorCardStockModal: document.querySelector("#colorCardStockModal"),
   closeColorCardStockModal: document.querySelector("#closeColorCardStockModal"),
   colorCardStockBrand: document.querySelector("#colorCardStockBrand"),
+  colorCardStockUrl: document.querySelector("#colorCardStockUrl"),
   colorCardStockList: document.querySelector("#colorCardStockList"),
   addColorCardStockBtn: document.querySelector("#addColorCardStockBtn"),
   finishToast: document.querySelector("#finishToast"),
@@ -1447,6 +1459,7 @@ function migrateOldState(oldState) {
 function normalizeState(input) {
   const inputBrands = Array.isArray(input.brands) && input.brands.length ? input.brands : structuredClone(DEFAULT_BRANDS);
   const legacyBrandCategories = input.brandCategories || {};
+  const inputBrandWeights = input.brandWeights || {};
   const mergedBrandName = (brand) => {
     if (!brand || brand === DEFAULT_BRAND) return DEFAULT_BRAND;
     if (brand === "萌娃娃" || brand === "蘇禾") return `${brand} 4股`;
@@ -1454,9 +1467,17 @@ function normalizeState(input) {
     return category && category !== DEFAULT_CATEGORY ? fullBrandCategoryName(brand, category) : brand;
   };
   const brands = [...new Set([DEFAULT_BRAND, ...inputBrands.map(mergedBrandName).filter((brand) => brand && brand !== DEFAULT_BRAND)])];
+  const brandWeights = { ...(defaultState.brandWeights || {}) };
+  Object.entries(inputBrandWeights).forEach(([brand, weight]) => {
+    brandWeights[mergedBrandName(brand)] = Number(weight || 0);
+  });
+  brands.forEach((brand) => {
+    if (brand !== DEFAULT_BRAND && brandWeights[brand] === undefined) brandWeights[brand] = 0;
+  });
   const next = {
     settings: { ...defaultState.settings, ...(input.settings || {}) },
     brands,
+    brandWeights,
     brandCards: Array.isArray(input.brandCards) ? input.brandCards : structuredClone(defaultState.brandCards),
     projectTypes: Array.isArray(input.projectTypes) && input.projectTypes.length ? input.projectTypes : structuredClone(defaultState.projectTypes),
     projectFolders: Array.isArray(input.projectFolders) ? input.projectFolders : structuredClone(defaultState.projectFolders),
@@ -3030,16 +3051,15 @@ function renderSettings() {
   });
   els.brandList.innerHTML = "";
   if (state.brands.some((brand) => brand !== DEFAULT_BRAND)) {
-    els.brandList.insertAdjacentHTML("beforeend", `<div class="brand-row-heading"><span></span><span>名稱</span><span>分類</span><span></span><span></span><span></span></div>`);
+    els.brandList.insertAdjacentHTML("beforeend", `<div class="brand-row-heading"><span></span><span>名稱</span><span></span><span></span><span></span></div>`);
   }
   state.brands.filter((brand) => brand !== DEFAULT_BRAND).forEach((brand) => {
     const row = document.createElement("article");
     row.className = "brand-row";
     row.draggable = true;
     row.dataset.brandRow = brand;
-    const parsed = splitBrandCategory(brand);
     const card = state.brandCards.find((item) => item.brand === brand);
-    row.innerHTML = `<span class="drag-handle settings-drag-handle">☰</span><input value="${escapeHtml(parsed.name)}" data-brand-field="${escapeHtml(brand)}:name" aria-label="線材品牌"><input value="${escapeHtml(parsed.category)}" data-brand-field="${escapeHtml(brand)}:category" aria-label="分類"><small>${card?.colors?.length || 0} 色</small><button class="text-button" data-edit-brand-card="${escapeHtml(brand)}">編輯</button><button class="text-button" data-remove-brand="${escapeHtml(brand)}">刪除</button>`;
+    row.innerHTML = `<span class="drag-handle settings-drag-handle">☰</span><input value="${escapeHtml(brand)}" data-brand-name="${escapeHtml(brand)}" aria-label="線材品牌"><small>${card?.colors?.length || 0} 色</small><button class="text-button" data-edit-brand-card="${escapeHtml(brand)}">編輯</button><button class="text-button" data-remove-brand="${escapeHtml(brand)}">刪除</button>`;
     els.brandList.append(row);
   });
   els.projectTypeList.innerHTML = "";
@@ -3160,6 +3180,9 @@ function brandCard(brand = selectedBrandName) {
 function openBrandCardEditor(brand) {
   selectedBrandName = brand;
   els.brandCardTitle.textContent = `${brand} 色卡`;
+  const parsed = splitBrandCategory(brand);
+  els.brandCardCategory.value = parsed.category;
+  els.brandCardWeight.value = Number(state.brandWeights?.[brand] || 0);
   els.brandCardColorName.value = "";
   els.brandCardLot.value = "";
   els.brandCardBatchPrefix.value = "";
@@ -3168,6 +3191,35 @@ function openBrandCardEditor(brand) {
   els.brandCardTextInput.value = "";
   renderBrandCardEditor();
   els.brandCardModal.classList.remove("hidden");
+}
+
+function renameBrandFromCardSettings() {
+  const oldName = selectedBrandName;
+  if (!oldName || oldName === DEFAULT_BRAND) return;
+  const parsed = splitBrandCategory(oldName);
+  const newName = fullBrandCategoryName(parsed.name, els.brandCardCategory.value);
+  if (!newName || newName === DEFAULT_BRAND) return;
+  if (state.brands.includes(newName) && newName !== oldName) {
+    alert("已有同名品牌分類。");
+    els.brandCardCategory.value = parsed.category;
+    return;
+  }
+  if (newName !== oldName) {
+    state.brands = state.brands.map((brand) => brand === oldName ? newName : brand);
+    state.brandCards.forEach((card) => {
+      if (card.brand === oldName) card.brand = newName;
+    });
+    state.yarns.forEach((yarn) => {
+      if (yarn.brand === oldName) yarn.brand = newName;
+    });
+    state.brandWeights[newName] = Number(state.brandWeights[oldName] || 0);
+    delete state.brandWeights[oldName];
+    selectedBrandName = newName;
+  }
+  state.brandWeights[selectedBrandName] = Number(els.brandCardWeight.value || 0);
+  els.brandCardTitle.textContent = `${selectedBrandName} 色卡`;
+  saveState();
+  renderSettings();
 }
 
 function renderBrandCardEditor() {
@@ -3216,8 +3268,10 @@ function colorCardBrands() {
 
 function renderColorCardStockPicker() {
   const cards = colorCardBrands();
+  const selectedBrand = els.colorCardStockBrand.value;
   els.colorCardStockBrand.innerHTML = cards.map((card) => `<option value="${escapeHtml(card.brand)}">${escapeHtml(card.brand)}</option>`).join("");
-  const brand = els.colorCardStockBrand.value || cards[0]?.brand || "";
+  const brand = cards.some((card) => card.brand === selectedBrand) ? selectedBrand : cards[0]?.brand || "";
+  if (brand) els.colorCardStockBrand.value = brand;
   const card = state.brandCards.find((item) => item.brand === brand);
   els.colorCardStockList.innerHTML = card?.colors?.length ? card.colors.map((color) => `
     <label class="color-card-choice">
@@ -3237,6 +3291,7 @@ function openColorCardStockPicker() {
     alert("目前沒有可選的線材色卡，請先到設定的線材品牌裡新增色卡。");
     return;
   }
+  els.colorCardStockUrl.value = "";
   renderColorCardStockPicker();
   els.colorCardStockModal.classList.remove("hidden");
 }
@@ -3380,6 +3435,9 @@ function switchView(view) {
   if (view !== "projects" && view !== "detail") activeProjectFolder = null;
   activeView = view;
   render();
+  requestAnimationFrame(() => {
+    document.querySelector(".workspace")?.scrollTo({ top: 0 });
+  });
 }
 
 function updateProject(patch) {
@@ -3404,9 +3462,12 @@ function setLabelText(field, text) {
 }
 
 function keepScroll(callback) {
-  const scrollY = window.scrollY;
+  const scroller = document.querySelector(".workspace");
+  const scrollY = scroller?.scrollTop || 0;
   callback();
-  requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
+  requestAnimationFrame(() => {
+    if (scroller) scroller.scrollTop = scrollY;
+  });
 }
 
 function moveArrayItem(list, sourceIndex, targetIndex) {
@@ -4089,11 +4150,19 @@ els.addColorCardStockBtn.addEventListener("click", () => {
     return;
   }
   const created = [];
+  const url = els.colorCardStockUrl.value.trim();
+  if (!url) {
+    alert("請先填寫購買連結。");
+    return;
+  }
+  const weight = brandWeight(brand);
   card.colors.filter((color) => ids.has(color.id)).forEach((color) => {
     const item = createStockItem("yarn", {
       colorName: color.colorName || color.lot || "未命名顏色",
       brand,
       lot: color.lot || "",
+      weight,
+      url,
       image: color.image || "",
       images: color.image ? [color.image] : []
     });
@@ -4135,7 +4204,7 @@ function openBulkYarnModal() {
   els.stockCreateModal.classList.add("hidden");
   els.bulkStockBrand.innerHTML = state.brands.map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`).join("");
   els.bulkStockType.value = "yarn";
-  els.bulkStockWeight.value = "";
+  els.bulkStockWeight.value = brandWeight(els.bulkStockBrand.value || DEFAULT_BRAND) || "";
   els.bulkStockUrl.value = "";
   els.bulkStockRows.innerHTML = "";
   renderBulkStockRows();
@@ -4148,6 +4217,9 @@ els.openColorCardStockBtn.addEventListener("click", () => {
 });
 els.bulkYarnBtn?.addEventListener("click", openBulkYarnModal);
 els.closeBulkStockModal.addEventListener("click", () => els.bulkStockModal.classList.add("hidden"));
+els.bulkStockBrand.addEventListener("change", () => {
+  els.bulkStockWeight.value = brandWeight(els.bulkStockBrand.value) || "";
+});
 els.addBulkStockRowBtn.addEventListener("click", () => {
   els.bulkStockRows.insertAdjacentHTML("beforeend", `<article class="bulk-stock-row"><input placeholder="顏色" data-bulk-color><input placeholder="色號" data-bulk-lot><button class="text-button" data-remove-bulk-row>刪除</button></article>`);
 });
@@ -4367,13 +4439,13 @@ els.newStitchLetter.addEventListener("keydown", (event) => {
   els.addStitchBtn.click();
 });
 els.addBrandBtn.addEventListener("click", () => {
-  const brand = fullBrandCategoryName(els.newBrandName.value, els.newBrandCategory.value);
+  const brand = els.newBrandName.value.trim();
   if (!brand) return;
   if (warnDuplicateName(brand, state.brands, "線材品牌")) return;
   keepScroll(() => {
     state.brands.push(brand);
+    state.brandWeights[brand] = 0;
     els.newBrandName.value = "";
-    els.newBrandCategory.value = "";
     render();
   });
 });
@@ -4389,6 +4461,7 @@ els.brandList.addEventListener("click", (event) => {
     if (brand === DEFAULT_BRAND) return;
     keepScroll(() => {
       state.brands = state.brands.filter((item) => item !== brand);
+      delete state.brandWeights[brand];
       state.brandCards = state.brandCards.filter((card) => card.brand !== brand);
       state.yarns.forEach((yarn) => {
         if (yarn.brand === brand) yarn.brand = DEFAULT_BRAND;
@@ -4399,28 +4472,21 @@ els.brandList.addEventListener("click", (event) => {
   }
 });
 els.brandList.addEventListener("change", (event) => {
-  const field = event.target.dataset.brandField;
-  if (!field) return;
-  const [oldName, key] = field.split(":");
+  const oldName = event.target.dataset.brandName;
+  const newName = event.target.value.trim();
   if (!oldName || oldName === DEFAULT_BRAND) return;
-  const row = event.target.closest("[data-brand-row]");
-  const nameInput = row?.querySelector("[data-brand-field$=':name']");
-  const categoryInput = row?.querySelector("[data-brand-field$=':category']");
-  const newName = fullBrandCategoryName(nameInput?.value || "", categoryInput?.value || "");
-  if (!newName || newName === DEFAULT_BRAND) {
-    const parsed = splitBrandCategory(oldName);
-    if (key === "name") event.target.value = parsed.name;
-    if (key === "category") event.target.value = parsed.category;
+  if (!newName) {
+    event.target.value = oldName;
     return;
   }
   if (state.brands.includes(newName) && newName !== oldName) {
-    alert("已有同名品牌分類。");
-    const parsed = splitBrandCategory(oldName);
-    if (nameInput) nameInput.value = parsed.name;
-    if (categoryInput) categoryInput.value = parsed.category;
+    alert("已有同名品牌。");
+    event.target.value = oldName;
     return;
   }
   state.brands = state.brands.map((brand) => brand === oldName ? newName : brand);
+  state.brandWeights[newName] = Number(state.brandWeights[oldName] || 0);
+  if (newName !== oldName) delete state.brandWeights[oldName];
   state.brandCards.forEach((card) => {
     if (card.brand === oldName) card.brand = newName;
   });
@@ -4635,6 +4701,12 @@ els.closeBrandCardModal.addEventListener("click", () => {
   els.brandCardModal.classList.add("hidden");
   render();
 });
+els.brandCardCategory.addEventListener("change", renameBrandFromCardSettings);
+els.brandCardWeight.addEventListener("input", () => {
+  if (!selectedBrandName) return;
+  state.brandWeights[selectedBrandName] = Number(els.brandCardWeight.value || 0);
+  saveState();
+});
 els.brandCardImageInput.addEventListener("change", () => readImages(els.brandCardImageInput.files, (src) => {
   els.brandCardImageInput.dataset.image = src;
 }));
@@ -4818,6 +4890,10 @@ async function forceAppUpdate() {
 }
 
 registerServiceWorker();
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+requestAnimationFrame(() => {
+  document.querySelector(".workspace")?.scrollTo({ top: 0 });
+});
 render();
 checkSharedPatternFromUrl();
 checkSharedStashFromUrl();

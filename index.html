@@ -369,7 +369,6 @@
             <summary>線材品牌</summary>
             <div class="brand-add-row">
               <input id="newBrandName" placeholder="新增品牌名稱" />
-              <input id="newBrandCategory" placeholder="分類" />
               <button class="primary-button compact" id="addBrandBtn">+ 新增</button>
             </div>
             <div class="brand-list" id="brandList"></div>
@@ -568,8 +567,12 @@
             <button class="header-icon" id="closeColorCardStockModal">×</button>
           </div>
           <label>
-            品牌
+            品牌分類
             <select id="colorCardStockBrand"></select>
+          </label>
+          <label>
+            購買連結
+            <input id="colorCardStockUrl" type="url" placeholder="https://..." />
           </label>
           <div class="color-card-select-list" id="colorCardStockList"></div>
           <button class="primary-button full-width" id="addColorCardStockBtn">加入庫存</button>
@@ -619,6 +622,16 @@
           <div class="section-header">
             <h2 id="brandCardTitle">品牌色卡</h2>
             <button class="header-icon" id="closeBrandCardModal">×</button>
+          </div>
+          <div class="form-grid compact-form">
+            <label>
+              分類
+              <input id="brandCardCategory" placeholder="例：4股" />
+            </label>
+            <label>
+              重量 g
+              <input id="brandCardWeight" type="number" min="0" />
+            </label>
           </div>
           <div class="brand-card-entry-row">
             <label class="photo-tile compact-photo-tile">
