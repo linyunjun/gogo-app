@@ -2355,7 +2355,7 @@ function checkSharedPatternFromUrl() {
   try {
     const payload = decodeSharePayload(match[1]);
     const name = payload?.pattern?.name || "分享織圖";
-    if (confirm(`要匯入「${name}」到自己的織圖庫嗎？`)) {
+    if (confirm(`要匯入「${name}」到自己的織圖嗎？`)) {
       const pattern = importPatternPayload(payload)[0];
       selectedPatternId = pattern.id;
       switchView("patternEdit");
@@ -3025,6 +3025,9 @@ function renderSettings() {
     els.stitchEditorList.append(row);
   });
   els.brandList.innerHTML = "";
+  if (state.brands.some((brand) => brand !== DEFAULT_BRAND)) {
+    els.brandList.insertAdjacentHTML("beforeend", `<div class="brand-row-heading"><span></span><span>名稱</span><span>分類</span><span></span><span></span><span></span></div>`);
+  }
   state.brands.filter((brand) => brand !== DEFAULT_BRAND).forEach((brand) => {
     const row = document.createElement("article");
     row.className = "brand-row";
