@@ -1088,6 +1088,7 @@ const els = {
   closePatternImportModal: document.querySelector("#closePatternImportModal"),
   importPatternBtn: document.querySelector("#importPatternBtn"),
   importTextPatternBtn: document.querySelector("#importTextPatternBtn"),
+  importFullPatternClipboardBtn: document.querySelector("#importFullPatternClipboardBtn"),
   patternImportInput: document.querySelector("#patternImportInput"),
   patternEditTitle: document.querySelector("#patternEditTitle"),
   patternEditMeta: document.querySelector("#patternEditMeta"),
@@ -1215,6 +1216,10 @@ const els = {
   pinPatternBtn: document.querySelector("#pinPatternBtn"),
   sharePatternBtn: document.querySelector("#sharePatternBtn"),
   deletePatternFromListBtn: document.querySelector("#deletePatternFromListBtn"),
+  patternShareModal: document.querySelector("#patternShareModal"),
+  closePatternShareModal: document.querySelector("#closePatternShareModal"),
+  sharePatternTextBtn: document.querySelector("#sharePatternTextBtn"),
+  sharePatternFullBtn: document.querySelector("#sharePatternFullBtn"),
   projectActionModal: document.querySelector("#projectActionModal"),
   closeProjectActionModal: document.querySelector("#closeProjectActionModal"),
   projectActionTitle: document.querySelector("#projectActionTitle"),
@@ -1574,7 +1579,7 @@ function normalizeGroupItems(group, fallbackId = "sc") {
     ? group.items
     : [{ stitchId: group?.stitchId || fallbackId }];
   return rawItems
-    .map((item) => ({ stitchId: item?.stitchId || item || fallbackId }))
+    .map((item) => ({ stitchId: item?.stitchId || item || fallbackId, count: Math.max(1, Number(item?.count || 1)) }))
     .filter((item) => item.stitchId);
 }
 
@@ -1683,9 +1688,7 @@ function parseImportedItems(text) {
           unresolved.push(innerToken);
           return;
         }
-        for (let index = 0; index < parsed.count; index += 1) {
-          groupItems.push({ stitchId: stitch.id });
-        }
+        groupItems.push({ stitchId: stitch.id, count: parsed.count });
       });
       if (groupItems.length) items.push({ type: "group", groupName: value, count, items: groupItems });
       return;
@@ -1779,7 +1782,7 @@ function segmentSignature(segment) {
   return JSON.stringify({
     note: segment.note || "",
     items: (segment.items || []).map((item) => item.type === "group"
-      ? ["group", Number(item.count || 1), ...normalizeGroupItems(item).map((groupItem) => groupItem.stitchId)]
+      ? ["group", Number(item.count || 1), ...normalizeGroupItems(item).map((groupItem) => [groupItem.stitchId, Number(groupItem.count || 1)])]
       : ["stitch", item.stitchId, Number(item.count || 1)])
   });
 }
@@ -1789,8 +1792,12 @@ function segmentRoundLabel(start, end = start) {
   return state.settings.roundLabelMode === "r" ? `R${start}-${end}` : `第 ${start}-${end} 圈`;
 }
 
+function groupUnitCount(group) {
+  return normalizeGroupItems(group, state.stitches[0]?.id || "sc").reduce((sum, item) => sum + Number(item.count || 1), 0);
+}
+
 function segmentStitchCount(segment) {
-  return (segment.items || []).reduce((sum, item) => sum + (item.type === "group" ? normalizeGroupItems(item).length * Number(item.count || 1) : Number(item.count || 0)), 0);
+  return (segment.items || []).reduce((sum, item) => sum + (item.type === "group" ? groupUnitCount(item) * Number(item.count || 1) : Number(item.count || 0)), 0);
 }
 
 function compactSegments(segments) {
@@ -1825,7 +1832,10 @@ function displayStitch(stitchId) {
 }
 
 function groupDisplay(group) {
-  return `(${normalizeGroupItems(group, state.stitches[0]?.id || "sc").map((item) => displayStitch(item.stitchId)).join(", ")})`;
+  return `(${normalizeGroupItems(group, state.stitches[0]?.id || "sc").map((item) => {
+    const count = Math.max(1, Number(item.count || 1));
+    return `${count > 1 ? count : ""}${displayStitch(item.stitchId)}`;
+  }).join(", ")})`;
 }
 
 function compactItemDisplay(item) {
@@ -1853,7 +1863,11 @@ function rowStitches(row) {
   row.items.forEach((item) => {
     if (item.type === "group") {
       for (let repeat = 0; repeat < Number(item.count || 1); repeat += 1) {
-        normalizeGroupItems(item, state.stitches[0]?.id || "sc").forEach((groupItem) => list.push(groupItem.stitchId));
+        normalizeGroupItems(item, state.stitches[0]?.id || "sc").forEach((groupItem) => {
+          for (let index = 0; index < Number(groupItem.count || 1); index += 1) {
+            list.push(groupItem.stitchId);
+          }
+        });
       }
       return;
     }
@@ -2195,6 +2209,41 @@ async function copyPatternText(patterns) {
   } catch {
     downloadTextFile(patterns.length > 1 ? `${patterns.length}個織圖.txt` : `${patterns[0]?.name || "織圖"}-織圖.txt`, text);
     alert("無法直接複製到剪貼簿，已改成下載文字檔。");
+  }
+}
+
+async function copyFullPatternData(patterns) {
+  const payload = patterns.length > 1 ? patternBundlePackage(patterns) : patternSharePackage(patterns[0]);
+  const text = JSON.stringify(payload, null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+    alert(patterns.length > 1 ? `已複製 ${patterns.length} 個含圖片織圖資料，可以貼到 LINE。` : "已複製含圖片織圖資料，可以貼到 LINE。");
+  } catch {
+    downloadTextFile(patterns.length > 1 ? `${patterns.length}個織圖-含圖片.txt` : `${patterns[0]?.name || "織圖"}-含圖片.txt`, text);
+    alert("無法直接複製到剪貼簿，已改成下載文字檔。");
+  }
+}
+
+async function importFullPatternFromClipboard() {
+  let text = "";
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    alert("無法讀取剪貼簿。請確認已複製含圖片的織圖資料，或改用純織圖文字匯入。");
+    return;
+  }
+  try {
+    const imported = importPatternPayload(JSON.parse(text));
+    selectedPatternId = imported[0]?.id || selectedPatternId;
+    if (imported.length === 1) {
+      switchView("patternEdit");
+      alert("已匯入含圖片織圖。");
+    } else {
+      switchView("patterns");
+      alert(`已匯入 ${imported.length} 個含圖片織圖。`);
+    }
+  } catch {
+    alert("剪貼簿內容不是可匯入的含圖片織圖資料。");
   }
 }
 
@@ -2864,10 +2913,25 @@ function renderPartEditor() {
 
 function itemEditor(segment, item, index) {
   if (item.type === "group") {
+    item.items = normalizeGroupItems(item, state.stitches[0]?.id || "sc");
     return `
       <div class="item-editor group-item-editor" draggable="true" data-item-row="${segment.id}:${index}">
         <span class="drag-handle item-drag-handle">☰</span>
-        <strong>${escapeHtml(groupDisplay(item))}</strong>
+        <div class="segment-group-editor">
+          <strong>${escapeHtml(groupDisplay(item))}</strong>
+          <div class="segment-group-items">
+            ${item.items.map((groupItem, groupIndex) => `
+              <div class="segment-group-row">
+                <select data-group-item-field="${segment.id}:${index}:${groupIndex}:stitchId">
+                  ${state.stitches.map((stitch) => `<option value="${stitch.id}" ${stitch.id === groupItem.stitchId ? "selected" : ""}>${escapeHtml(displayStitch(stitch.id))}</option>`).join("")}
+                </select>
+                <input type="number" min="1" value="${Number(groupItem.count || 1)}" data-group-item-field="${segment.id}:${index}:${groupIndex}:count" inputmode="numeric">
+                <button class="text-button" data-remove-group-stitch="${segment.id}:${index}:${groupIndex}">×</button>
+              </div>
+            `).join("")}
+          </div>
+          <button class="outline-button mini-add-button" data-add-group-stitch="${segment.id}:${index}">+ 新增針法</button>
+        </div>
         <input type="number" min="1" value="${Number(item.count || 1)}" data-item-field="${segment.id}:${index}:count">
         <button class="text-button" data-remove-item="${segment.id}:${index}">×</button>
       </div>
@@ -3332,6 +3396,7 @@ function renderCommonGroupEditor() {
       <select data-common-group-item-field="${index}:stitchId">
         ${state.stitches.map((stitch) => `<option value="${stitch.id}" ${stitch.id === item.stitchId ? "selected" : ""}>${escapeHtml(displayStitch(stitch.id))}</option>`).join("")}
       </select>
+      <input data-common-group-item-field="${index}:count" type="number" min="1" value="${Number(item.count || 1)}" inputmode="numeric">
       <button class="text-button" data-remove-common-group-item="${index}">×</button>
     </article>
   `).join("");
@@ -3351,17 +3416,38 @@ function moveCommonGroupItem(sourceIndexText, targetIndexText) {
 
 function openCommonGroupPicker(segmentId) {
   targetSegmentForGroupId = segmentId;
-  els.commonGroupPickerList.innerHTML = state.commonGroups.length ? state.commonGroups.map((group) => `
+  els.commonGroupPickerList.innerHTML = `
+    <button class="tool-row common-group-display picker-group-row" data-create-temp-group>
+      <span><strong>+ 臨時群組</strong><small>只加入這個段落，不存到常用群組</small></span>
+    </button>
+    <button class="tool-row common-group-display picker-group-row" data-create-common-group>
+      <span><strong>+ 新的群組</strong><small>立即新增並編輯</small></span>
+    </button>
+    ${state.commonGroups.length ? state.commonGroups.map((group) => `
     <button class="tool-row common-group-display picker-group-row" data-pick-common-group="${group.id}">
       <span><strong>${escapeHtml(group.name)}</strong><small>${escapeHtml(groupDisplay(group))}</small></span>
     </button>
-  `).join("") : `<p class="empty-note">尚未在設定新增常用群組。</p>`;
+  `).join("") : `<p class="empty-note">尚未在設定新增常用群組。</p>`}`;
   els.commonGroupPickerModal.classList.remove("hidden");
 }
 
 function closeCommonGroupPicker() {
   targetSegmentForGroupId = null;
   els.commonGroupPickerModal.classList.add("hidden");
+}
+
+function insertTemporaryGroupIntoSegment() {
+  const pattern = editablePattern();
+  const { segment } = findSegment(pattern, targetSegmentForGroupId);
+  if (!segment) return;
+  segment.items.push({
+    type: "group",
+    groupName: "臨時群組",
+    count: 1,
+    items: [{ stitchId: state.stitches[0]?.id || "sc", count: 1 }]
+  });
+  closeCommonGroupPicker();
+  render();
 }
 
 function insertCommonGroupIntoSegment(groupId) {
@@ -3383,10 +3469,6 @@ function addCommonGroupToSegment(segmentId) {
   const pattern = editablePattern();
   const { segment } = findSegment(pattern, segmentId);
   if (!segment) return;
-  if (!state.commonGroups.length) {
-    alert("尚未在設定新增常用群組。");
-    return;
-  }
   openCommonGroupPicker(segmentId);
 }
 
@@ -3922,8 +4004,27 @@ els.sharePatternBtn.addEventListener("click", async () => {
   const patterns = selectedPatternsForAction();
   if (!patterns.length) return;
   els.patternActionModal.classList.add("hidden");
+  els.patternShareModal.classList.remove("hidden");
+});
+els.sharePatternTextBtn.addEventListener("click", async () => {
+  const patterns = selectedPatternsForAction();
+  if (!patterns.length) return;
+  els.patternShareModal.classList.add("hidden");
   selectedPatternIds.clear();
   await copyPatternText(patterns);
+  renderPatterns();
+});
+els.sharePatternFullBtn.addEventListener("click", async () => {
+  const patterns = selectedPatternsForAction();
+  if (!patterns.length) return;
+  els.patternShareModal.classList.add("hidden");
+  selectedPatternIds.clear();
+  await copyFullPatternData(patterns);
+  renderPatterns();
+});
+els.closePatternShareModal.addEventListener("click", () => {
+  selectedPatternIds.clear();
+  els.patternShareModal.classList.add("hidden");
   renderPatterns();
 });
 els.deletePatternFromListBtn.addEventListener("click", () => {
@@ -3957,15 +4058,19 @@ function openTextPatternImporter() {
   els.textPatternModal.classList.remove("hidden");
 }
 
-els.openPatternImportBtn.addEventListener("click", openTextPatternImporter);
+els.openPatternImportBtn.addEventListener("click", () => els.patternImportModal.classList.remove("hidden"));
 els.closePatternImportModal.addEventListener("click", () => els.patternImportModal.classList.add("hidden"));
-els.importPatternBtn.addEventListener("click", () => {
+els.importPatternBtn?.addEventListener("click", () => {
   els.patternImportModal.classList.add("hidden");
   els.patternImportInput.click();
 });
 els.importTextPatternBtn.addEventListener("click", () => {
   els.patternImportModal.classList.add("hidden");
   openTextPatternImporter();
+});
+els.importFullPatternClipboardBtn.addEventListener("click", async () => {
+  els.patternImportModal.classList.add("hidden");
+  await importFullPatternFromClipboard();
 });
 els.closeTextPatternModal.addEventListener("click", () => els.textPatternModal.classList.add("hidden"));
 els.convertTextPatternBtn.addEventListener("click", () => {
@@ -4096,6 +4201,7 @@ els.closePartActionModal.addEventListener("click", () => els.partActionModal.cla
 els.partSegmentList.addEventListener("input", (event) => {
   const segmentField = event.target.dataset.segmentField;
   const itemField = event.target.dataset.itemField;
+  const groupItemField = event.target.dataset.groupItemField;
   const pattern = editablePattern();
   if (segmentField) {
     const [id, field] = segmentField.split(":");
@@ -4107,6 +4213,12 @@ els.partSegmentList.addEventListener("input", (event) => {
     const item = findSegment(pattern, segmentId).segment.items[Number(itemIndex)];
     item[field] = field === "count" ? Number(event.target.value) : event.target.value;
   }
+  if (groupItemField) {
+    const [segmentId, itemIndex, groupIndex, field] = groupItemField.split(":");
+    const item = findSegment(pattern, segmentId).segment.items[Number(itemIndex)];
+    item.items = normalizeGroupItems(item, state.stitches[0]?.id || "sc");
+    item.items[Number(groupIndex)][field] = field === "count" ? Number(event.target.value) : event.target.value;
+  }
   saveState();
 });
 els.partSegmentList.addEventListener("click", (event) => {
@@ -4115,6 +4227,8 @@ els.partSegmentList.addEventListener("click", (event) => {
   const copySegment = event.target.closest("[data-copy-segment]")?.dataset.copySegment;
   const addItem = event.target.closest("[data-add-item]")?.dataset.addItem;
   const removeItem = event.target.closest("[data-remove-item]")?.dataset.removeItem;
+  const addGroupStitch = event.target.closest("[data-add-group-stitch]")?.dataset.addGroupStitch;
+  const removeGroupStitch = event.target.closest("[data-remove-group-stitch]")?.dataset.removeGroupStitch;
   if (removeSegment) {
     pattern.parts.forEach((part) => {
       part.segments = part.segments.filter((segment) => segment.id !== removeSegment);
@@ -4128,6 +4242,22 @@ els.partSegmentList.addEventListener("click", (event) => {
   }
   if (addItem) {
     findSegment(pattern, addItem).segment.items.push({ stitchId: state.stitches[0].id, count: 1 });
+    render();
+    return;
+  }
+  if (addGroupStitch) {
+    const [segmentId, index] = addGroupStitch.split(":");
+    const item = findSegment(pattern, segmentId).segment.items[Number(index)];
+    item.items = normalizeGroupItems(item, state.stitches[0]?.id || "sc");
+    item.items.push({ stitchId: state.stitches[0]?.id || "sc", count: 1 });
+    render();
+    return;
+  }
+  if (removeGroupStitch) {
+    const [segmentId, itemIndex, groupIndex] = removeGroupStitch.split(":");
+    const item = findSegment(pattern, segmentId).segment.items[Number(itemIndex)];
+    item.items = normalizeGroupItems(item, state.stitches[0]?.id || "sc");
+    if (item.items.length > 1) item.items.splice(Number(groupIndex), 1);
     render();
     return;
   }
@@ -4655,7 +4785,7 @@ els.commonGroupNameInput.addEventListener("input", () => {
 els.addCommonGroupItemBtn.addEventListener("click", () => {
   const group = currentEditingCommonGroup();
   if (!group) return;
-  group.items.push({ stitchId: state.stitches[0]?.id || "sc" });
+  group.items.push({ stitchId: state.stitches[0]?.id || "sc", count: 1 });
   renderCommonGroupEditor();
   saveState();
 });
@@ -4665,7 +4795,7 @@ els.commonGroupItemList.addEventListener("change", (event) => {
   const group = currentEditingCommonGroup();
   if (!group) return;
   const [indexText, key] = field.split(":");
-  group.items[Number(indexText)][key] = event.target.value;
+  group.items[Number(indexText)][key] = key === "count" ? Math.max(1, Number(event.target.value || 1)) : event.target.value;
   renderCommonGroupEditor();
   saveState();
 });
@@ -4710,6 +4840,23 @@ els.closeCommonGroupEditModal.addEventListener("click", () => {
   render();
 });
 els.commonGroupPickerList.addEventListener("click", (event) => {
+  if (event.target.closest("[data-create-temp-group]")) {
+    insertTemporaryGroupIntoSegment();
+    return;
+  }
+  if (event.target.closest("[data-create-common-group]")) {
+    const group = {
+      id: crypto.randomUUID(),
+      name: `常用群組 ${state.commonGroups.length + 1}`,
+      items: [{ stitchId: state.stitches[0]?.id || "sc", count: 1 }]
+    };
+    state.commonGroups.push(group);
+    closeCommonGroupPicker();
+    openCommonGroupEditor(group.id);
+    saveState();
+    renderSettings();
+    return;
+  }
   const groupId = event.target.closest("[data-pick-common-group]")?.dataset.pickCommonGroup;
   if (groupId) insertCommonGroupIntoSegment(groupId);
 });

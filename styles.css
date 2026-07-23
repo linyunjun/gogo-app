@@ -719,8 +719,32 @@ textarea {
 .group-item-editor {
   grid-template-columns: 28px 1fr 74px 36px;
 }
+.segment-group-editor {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.segment-group-items {
+  display: grid;
+  gap: 6px;
+}
+.segment-group-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 32px;
+  gap: 6px;
+  align-items: center;
+}
+.segment-group-row select,
+.segment-group-row input {
+  min-width: 0;
+}
+.mini-add-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+}
 .group-builder-row {
-  grid-template-columns: 28px 1fr 36px;
+  grid-template-columns: 28px minmax(0, 1fr) 74px 36px;
 }
 #commonGroupItemList {
   margin: 12px 0;
@@ -795,17 +819,20 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
 }
 .picker-group-row span:nth-child(1) {
-  display: flex;
-  align-items: baseline;
+  display: grid;
   gap: 6px;
   min-width: 0;
 }
 .picker-group-row strong,
 .picker-group-row small {
-  display: inline;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .picker-group-row small {
-  flex: 1;
+  color: var(--muted);
 }
 .yarn-card {
   display: grid;
@@ -1267,7 +1294,8 @@ textarea {
   }
   .item-editor { grid-template-columns: 28px 1fr 74px 36px; }
   .group-item-editor { grid-template-columns: 28px 1fr 68px 36px; }
-  .group-builder-row { grid-template-columns: 28px 1fr 36px; }
+  .segment-group-row { grid-template-columns: minmax(0, 1fr) 54px 30px; }
+  .group-builder-row { grid-template-columns: 28px minmax(0, 1fr) 58px 36px; }
   .sort-menu {
     min-width: 78px;
     max-width: 92px;
