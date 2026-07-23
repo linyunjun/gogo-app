@@ -1,4 +1,4 @@
-const VERSION = "72";
+const VERSION = "73";
 const CACHE_NAME = `free-knit-workbench-v${VERSION}`;
 const ASSETS = [
   "./",

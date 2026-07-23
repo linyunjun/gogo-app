@@ -1277,6 +1277,7 @@ const els = {
   backupDataBtn: document.querySelector("#backupDataBtn"),
   restoreDataBtn: document.querySelector("#restoreDataBtn"),
   restoreDataInput: document.querySelector("#restoreDataInput"),
+  updateAppBtn: document.querySelector("#updateAppBtn"),
   resetDataBtn: document.querySelector("#resetDataBtn"),
   toolEditModal: document.querySelector("#toolEditModal"),
   closeToolEditModal: document.querySelector("#closeToolEditModal"),
@@ -4330,6 +4331,7 @@ els.resetDataBtn.addEventListener("click", () => {
 });
 els.backupDataBtn.addEventListener("click", () => downloadFullBackup());
 els.restoreDataBtn.addEventListener("click", () => els.restoreDataInput.click());
+els.updateAppBtn.addEventListener("click", () => forceAppUpdate());
 els.restoreDataInput.addEventListener("change", async () => {
   const file = els.restoreDataInput.files?.[0];
   if (!file) return;
@@ -4795,6 +4797,24 @@ function registerServiceWorker() {
   window.addEventListener("load", () => {
     sessionStorage.removeItem("sw-refreshing");
   });
+}
+
+async function forceAppUpdate() {
+  if (!confirm("將重新檢查新版並重新載入 APP。\n\n你的作品、織圖與庫存資料不會被刪除。")) return;
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => key.startsWith("free-knit-workbench-")).map((key) => caches.delete(key)));
+    }
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update();
+    }
+    sessionStorage.setItem("sw-refreshing", "true");
+    window.location.reload();
+  } catch {
+    alert("更新失敗，請確認網路後再試一次。你的資料沒有被刪除。");
+  }
 }
 
 registerServiceWorker();
