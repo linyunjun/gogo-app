@@ -159,8 +159,7 @@
                 <option value="rounds-desc">段數多</option>
                 <option value="rounds-asc">段數少</option>
               </select>
-              <button class="outline-button compact" id="importPatternBtn">匯入</button>
-              <button class="outline-button compact" id="importTextPatternBtn">文字匯入</button>
+              <button class="outline-button compact" id="openPatternImportBtn">匯入</button>
               <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
               <input class="hidden" id="patternImportInput" type="file" accept="application/json,.json,.gogopattern,.gogopatterns" />
             </div>
@@ -455,6 +454,19 @@
             <button class="outline-button" id="pinPatternBtn">置頂</button>
             <button class="outline-button" id="sharePatternBtn">分享</button>
             <button class="danger-button" id="deletePatternFromListBtn">刪除</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal floating-action-modal hidden" id="patternImportModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>匯入織圖</h2>
+            <button class="header-icon" id="closePatternImportModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="importPatternBtn">選擇檔案</button>
+            <button class="outline-button" id="importTextPatternBtn">文字匯入</button>
           </div>
         </div>
       </div>

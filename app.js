@@ -1203,6 +1203,9 @@ const els = {
   patternList: document.querySelector("#patternList"),
   patternSort: document.querySelector("#patternSort"),
   newPatternBtn: document.querySelector("#newPatternBtn"),
+  openPatternImportBtn: document.querySelector("#openPatternImportBtn"),
+  patternImportModal: document.querySelector("#patternImportModal"),
+  closePatternImportModal: document.querySelector("#closePatternImportModal"),
   importPatternBtn: document.querySelector("#importPatternBtn"),
   importTextPatternBtn: document.querySelector("#importTextPatternBtn"),
   patternImportInput: document.querySelector("#patternImportInput"),
@@ -3844,8 +3847,14 @@ els.closePatternActionModal.addEventListener("click", () => {
   els.patternActionModal.classList.add("hidden");
   renderPatterns();
 });
-els.importPatternBtn.addEventListener("click", () => els.patternImportInput.click());
+els.openPatternImportBtn.addEventListener("click", () => els.patternImportModal.classList.remove("hidden"));
+els.closePatternImportModal.addEventListener("click", () => els.patternImportModal.classList.add("hidden"));
+els.importPatternBtn.addEventListener("click", () => {
+  els.patternImportModal.classList.add("hidden");
+  els.patternImportInput.click();
+});
 els.importTextPatternBtn.addEventListener("click", () => {
+  els.patternImportModal.classList.add("hidden");
   els.textPatternName.value = "";
   els.textPatternInput.value = "";
   els.textPatternUnparsed.classList.add("hidden");
