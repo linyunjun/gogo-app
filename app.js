@@ -4,6 +4,10 @@ const PATTERN_SHARE_VERSION = 1;
 const DEFAULT_BRAND = "未指定";
 const DEFAULT_CATEGORY = "未分類";
 const PUBLIC_ASSET_BASE = "https://linyunjun.github.io/gogo-app/";
+const DEFAULT_BRAND_IMAGE_FOLDERS = {
+  "萌娃娃 4股": "images/yarn/mengwawa-4",
+  "蘇禾 4股": "images/yarn/suho-4"
+};
 const IMAGE_MAX_SIZE = 900;
 const IMAGE_QUALITY = 0.72;
 let storageWarningShown = false;
@@ -22,568 +26,412 @@ const defaultData = {
     "蘇禾 4股"
   ],
   "brandCards": [
-    {
-      "brand": "萌娃娃 4股",
-      "colors": [
-        {
-          "id": "f1b7c84c-24bb-484a-b580-af93fdd3b156",
-          "lot": "01",
-          "colorName": "白色",
-          "image": ""
-        },
-        {
-          "id": "5007feec-352f-4bfd-aebe-b233c0ecbb8d",
-          "lot": "02",
-          "colorName": "奶白",
-          "image": ""
-        },
-        {
-          "id": "6110bc64-bc40-4da7-bf0b-339990e8276b",
-          "lot": "03",
-          "colorName": "膚色",
-          "image": ""
-        },
-        {
-          "id": "2b442012-23a5-481f-a35f-3e6338778445",
-          "lot": "04",
-          "colorName": "淺肉粉",
-          "image": ""
-        },
-        {
-          "id": "964419dc-6dfa-4405-b554-8a6cdd4e25fb",
-          "lot": "05",
-          "colorName": "粉紅",
-          "image": ""
-        },
-        {
-          "id": "b9c9c2d4-e883-4e81-a642-9be6b39eeecd",
-          "lot": "06",
-          "colorName": "深粉",
-          "image": ""
-        },
-        {
-          "id": "db5af01e-3eab-4084-a86c-3b8034129605",
-          "lot": "07",
-          "colorName": "胭脂紅",
-          "image": ""
-        },
-        {
-          "id": "51d77cd7-71c4-4d01-98b1-aa1fe06c81a2",
-          "lot": "08",
-          "colorName": "玫紅",
-          "image": ""
-        },
-        {
-          "id": "ff03749f-ba4e-46c8-b44b-25a00b4ddd5c",
-          "lot": "09",
-          "colorName": "大紅",
-          "image": ""
-        },
-        {
-          "id": "ec4b8581-a6ed-489e-87bb-6ded201741ec",
-          "lot": "10",
-          "colorName": "淺黃",
-          "image": ""
-        },
-        {
-          "id": "07e5b823-4988-4459-a025-fa8894f942ad",
-          "lot": "11",
-          "colorName": "金黃",
-          "image": ""
-        },
-        {
-          "id": "548e3e28-b4fe-4ee9-a744-4c7c391e67ac",
-          "lot": "12",
-          "colorName": "亮黃",
-          "image": ""
-        },
-        {
-          "id": "92d0b8f4-58df-4a38-83fe-e5a619f5740e",
-          "lot": "13",
-          "colorName": "橘黃",
-          "image": ""
-        },
-        {
-          "id": "5d8bcece-72e8-4f89-9fd4-dde765a0f8c5",
-          "lot": "14",
-          "colorName": "橘紅",
-          "image": ""
-        },
-        {
-          "id": "f76750a7-7ddb-49d8-8246-b6c85a6cb9e9",
-          "lot": "15",
-          "colorName": "粉紫",
-          "image": ""
-        },
-        {
-          "id": "8e97fb0d-4b34-4fce-8474-6e3ed197c6da",
-          "lot": "16",
-          "colorName": "紫色",
-          "image": ""
-        },
-        {
-          "id": "82f7402e-75da-489c-a2e9-f239633a12f7",
-          "lot": "17",
-          "colorName": "若水",
-          "image": ""
-        },
-        {
-          "id": "2a285e5d-3ad2-4611-aa41-80170e122065",
-          "lot": "18",
-          "colorName": "天藍",
-          "image": ""
-        },
-        {
-          "id": "b727c985-1372-42a3-8e0d-3a9bb4db4349",
-          "lot": "19",
-          "colorName": "深藍",
-          "image": ""
-        },
-        {
-          "id": "02ee0b92-e427-4a42-bcb4-2275aa29cf21",
-          "lot": "20",
-          "colorName": "寶藍",
-          "image": ""
-        },
-        {
-          "id": "86a8760a-f169-46c6-b9ed-4696b2e07d86",
-          "lot": "21",
-          "colorName": "藏青",
-          "image": ""
-        },
-        {
-          "id": "01f8926a-3cec-4199-bec0-46d664c4c3ea",
-          "lot": "22",
-          "colorName": "湖綠",
-          "image": ""
-        },
-        {
-          "id": "74679325-4e0c-4ba7-8124-bcf7b07c590f",
-          "lot": "23",
-          "colorName": "祖母綠",
-          "image": ""
-        },
-        {
-          "id": "042bbc8e-f8c1-44db-8e29-87d9c99f7a97",
-          "lot": "24",
-          "colorName": "嫩綠",
-          "image": ""
-        },
-        {
-          "id": "1c13418f-f452-4297-bf68-117214691190",
-          "lot": "25",
-          "colorName": "芽綠",
-          "image": ""
-        },
-        {
-          "id": "60dff6f5-59a1-4e7d-933b-68b799394d18",
-          "lot": "26",
-          "colorName": "軍綠",
-          "image": ""
-        },
-        {
-          "id": "b6bf2c68-cba0-4473-ab5a-babd93caa64a",
-          "lot": "27",
-          "colorName": "翠綠",
-          "image": ""
-        },
-        {
-          "id": "f36a93c0-d42d-42c7-813a-d4265f426191",
-          "lot": "28",
-          "colorName": "米色",
-          "image": ""
-        },
-        {
-          "id": "5a35c494-043e-4c51-a8b3-9a77b602b9eb",
-          "lot": "29",
-          "colorName": "奶茶",
-          "image": ""
-        },
-        {
-          "id": "be22a806-29c0-4a5a-9f21-b97ee6dcaebb",
-          "lot": "30",
-          "colorName": "黃棕",
-          "image": ""
-        },
-        {
-          "id": "f828b870-a82c-4994-a28b-d86eb3b47869",
-          "lot": "31",
-          "colorName": "淺咖",
-          "image": ""
-        },
-        {
-          "id": "4f7f1e99-dbf4-493f-b51b-4cbddaa1c0c2",
-          "lot": "32",
-          "colorName": "深咖",
-          "image": ""
-        },
-        {
-          "id": "ff9094d7-b0b3-476f-bb57-f3bcf310f845",
-          "lot": "33",
-          "colorName": "灰色",
-          "image": ""
-        },
-        {
-          "id": "1eefe9c1-d55d-4d45-a689-a6a117c677d3",
-          "lot": "34",
-          "colorName": "黑色",
-          "image": ""
-        },
-        {
-          "id": "5b2e93e6-7f32-4380-bc71-b9389b6c3886",
-          "lot": "35",
-          "colorName": "麥香",
-          "image": ""
-        },
-        {
-          "id": "85d7c7f2-533d-4721-ba8c-20601d76e62d",
-          "lot": "36",
-          "colorName": "淺灰",
-          "image": ""
-        },
-        {
-          "id": "c3e86bdb-5a53-4621-b728-da9423146260",
-          "lot": "37",
-          "colorName": "肉色",
-          "image": ""
-        },
-        {
-          "id": "e29c01bc-aaa9-4532-aea1-4e004cc00667",
-          "lot": "38",
-          "colorName": "煙紫",
-          "image": ""
-        },
-        {
-          "id": "5f9ce27d-0829-4949-89e5-f866bd7ec32a",
-          "lot": "39",
-          "colorName": "橘色",
-          "image": ""
-        },
-        {
-          "id": "a8d00344-4307-4e1d-86bf-c0a83dace4b1",
-          "lot": "40",
-          "colorName": "黃綠",
-          "image": ""
-        },
-        {
-          "id": "ea1b646e-22ee-4e0e-b302-cffd885aff52",
-          "lot": "41",
-          "colorName": "間青",
-          "image": ""
-        },
-        {
-          "id": "b4101027-3a55-41cb-8007-092685fd2b78",
-          "lot": "42",
-          "colorName": "牛仔藍",
-          "image": ""
-        },
-        {
-          "id": "8f0fde3a-1eeb-4c3d-b4cb-bb51f179ec60",
-          "lot": "43",
-          "colorName": "櫻花粉",
-          "image": ""
-        },
-        {
-          "id": "28f4153b-4c27-4019-a23f-20efd1045ae0",
-          "lot": "44",
-          "colorName": "珊瑚粉",
-          "image": ""
-        },
-        {
-          "id": "95d01281-c29b-4ad2-abbe-cff8dd6dcb68",
-          "lot": "45",
-          "colorName": "群藍",
-          "image": ""
-        },
-        {
-          "id": "d38cd25c-0118-4f20-90af-3be5e6399112",
-          "lot": "46",
-          "colorName": "靛藍",
-          "image": ""
-        },
-        {
-          "id": "f5c5681e-67a1-4788-a81a-e99abe00c17a",
-          "lot": "47",
-          "colorName": "薄荷",
-          "image": ""
-        },
-        {
-          "id": "21555fe7-1387-4548-9656-f74015e8b1bc",
-          "lot": "48",
-          "colorName": "秋黃",
-          "image": ""
-        },
-        {
-          "id": "98acaed4-7a1f-4617-bd9a-0cd97b3bfc23",
-          "lot": "49",
-          "colorName": "深紫",
-          "image": ""
-        },
-        {
-          "id": "2cd3d236-9c13-42fe-b381-8a9e6269376b",
-          "lot": "50",
-          "colorName": "深紅",
-          "image": ""
-        },
-        {
-          "id": "cba6c6aa-e33b-44ac-8a64-36d00253b3b3",
-          "lot": "51",
-          "colorName": "乳白",
-          "image": ""
-        },
-        {
-          "id": "fca81128-bb2f-490f-b575-b9f3666ff7bb",
-          "lot": "52",
-          "colorName": "桃紅",
-          "image": ""
-        },
-        {
-          "id": "038f86b6-c6d0-4e6e-8776-d520a5a72139",
-          "lot": "53",
-          "colorName": "紫紅",
-          "image": ""
-        },
-        {
-          "id": "de5f1500-0fe0-446b-aa13-5bf2771cef80",
-          "lot": "54",
-          "colorName": "森林綠",
-          "image": ""
-        },
-        {
-          "id": "311d5b72-e004-4668-832f-c773c793c5d6",
-          "lot": "55",
-          "colorName": "淺軍綠",
-          "image": ""
-        },
-        {
-          "id": "4e60c98b-5f78-44a4-b1b7-53781a16cec7",
-          "lot": "56",
-          "colorName": "淡雪青",
-          "image": ""
-        },
-        {
-          "id": "2c9515eb-1271-4de3-a260-cd20123405d7",
-          "lot": "57",
-          "colorName": "雪青",
-          "image": ""
-        },
-        {
-          "id": "fb6ec16f-0ff9-4d78-b5b8-3cf0141fa5be",
-          "lot": "58",
-          "colorName": "湖藍",
-          "image": ""
-        },
-        {
-          "id": "698c1c0a-a9f5-454a-bf8c-26a6fee4a1e3",
-          "lot": "59",
-          "colorName": "仙蹤綠",
-          "image": ""
-        },
-        {
-          "id": "be8c1dc2-a517-4425-92da-36ab94c49221",
-          "lot": "60",
-          "colorName": "淺棕",
-          "image": ""
-        },
-        {
-          "id": "f84d2ff1-dafb-4e8c-af45-90f85adafcfd",
-          "lot": "61",
-          "colorName": "棕色",
-          "image": ""
-        },
-        {
-          "id": "409ab463-80de-4f21-808c-38f1c2df215f",
-          "lot": "62",
-          "colorName": "紅棕",
-          "image": ""
-        },
-        {
-          "id": "b9caf884-dea1-4bfc-9fa3-56ae0e7e2e0f",
-          "lot": "63",
-          "colorName": "小雞黃",
-          "image": ""
-        },
-        {
-          "id": "cf1f74b7-5aa4-4b84-9201-aa72f1e444d8",
-          "lot": "64",
-          "colorName": "淺橘",
-          "image": ""
-        },
-        {
-          "id": "1e7f7042-d92c-4993-908c-341a375f60c8",
-          "lot": "65",
-          "colorName": "菊粉",
-          "image": ""
-        },
-        {
-          "id": "ddda743a-7815-4a8b-a5ee-6a5f2d577fbf",
-          "lot": "66",
-          "colorName": "酒紅",
-          "image": ""
-        },
-        {
-          "id": "e0eb667e-5722-4cc7-9f2a-c12b1fff1bba",
-          "lot": "67",
-          "colorName": "淺羅馬紅",
-          "image": ""
-        },
-        {
-          "id": "0abf3b1f-2eea-4aed-b0c2-1a12b5ea7b6e",
-          "lot": "1301",
-          "colorName": "青金色",
-          "image": ""
-        },
-        {
-          "id": "8acd4c45-c4d5-496e-94ac-41032536db29",
-          "lot": "1302",
-          "colorName": "聖誕綠",
-          "image": ""
-        },
-        {
-          "id": "79db9a6c-903f-4ed6-ac04-1d939d53a7e5",
-          "lot": "1303",
-          "colorName": "羅馬紅",
-          "image": ""
-        },
-        {
-          "id": "32ff127f-d1e1-4e7a-8a8d-6ac61dc95c8e",
-          "lot": "1304",
-          "colorName": "水藍色",
-          "image": ""
-        },
-        {
-          "id": "c01f1a64-ef36-4b31-a640-1a414339e028",
-          "lot": "1305",
-          "colorName": "亮粉",
-          "image": ""
-        },
-        {
-          "id": "01a3f1b8-1eb0-4245-b89b-ee480bbc98af",
-          "lot": "1306",
-          "colorName": "西瓜紅",
-          "image": ""
-        },
-        {
-          "id": "3efddce6-b51d-4ffe-b056-8b8245b75fd1",
-          "lot": "1311",
-          "colorName": "卡其",
-          "image": ""
-        },
-        {
-          "id": "0780b502-bd45-4838-abd5-8c095ba1f44f",
-          "lot": "1312",
-          "colorName": "淺藍",
-          "image": ""
-        },
-        {
-          "id": "9a3b673c-4512-419b-a253-ed3622ca0d6c",
-          "lot": "1313",
-          "colorName": "青草綠",
-          "image": ""
-        },
-        {
-          "id": "7fcaa006-cc5a-486b-accc-fc7f3897ac96",
-          "lot": "1314",
-          "colorName": "紫藤",
-          "image": ""
-        },
-        {
-          "id": "7fbfd6ae-4345-450c-ab19-19cf45c5f287",
-          "lot": "1315",
-          "colorName": "淺湖藍",
-          "image": ""
-        },
-        {
-          "id": "af034e6c-bf43-468d-90cb-3cc087235526",
-          "lot": "1316",
-          "colorName": "奶油黃",
-          "image": ""
-        },
-        {
-          "id": "ac7ba670-d612-4d21-8bd9-374c47609c11",
-          "lot": "1317",
-          "colorName": "肉橘粉",
-          "image": ""
-        },
-        {
-          "id": "298d0f24-3f78-48b0-abb1-1ece8c1da9d2",
-          "lot": "1318",
-          "colorName": "向日葵黃",
-          "image": ""
-        },
-        {
-          "id": "2f2369f8-f5ef-4acf-9a62-14bff0a32e40",
-          "lot": "1319",
-          "colorName": "新芽",
-          "image": ""
-        },
-        {
-          "id": "375fa189-5dbe-446a-8868-a63d58a0740d",
-          "lot": "1320",
-          "colorName": "香芋紫",
-          "image": ""
-        },
-        {
-          "id": "09e87e84-7af6-4687-81a4-f0d144a2051d",
-          "lot": "1321",
-          "colorName": "海貝紫",
-          "image": ""
-        },
-        {
-          "id": "a25acfa6-c7ff-418d-8b65-ea1e5d90135a",
-          "lot": "1322",
-          "colorName": "中灰",
-          "image": ""
-        },
-        {
-          "id": "f6c9e8dd-8df6-4739-b09d-580bd6811c75",
-          "lot": "1323",
-          "colorName": "豆沙綠",
-          "image": ""
-        },
-        {
-          "id": "9426b8fb-aa21-4eea-81f1-7d9e05ac8044",
-          "lot": "1324",
-          "colorName": "藕粉",
-          "image": ""
-        },
-        {
-          "id": "f0d82ca9-1063-4b73-b5d4-ae74743dd3ba",
-          "lot": "1325",
-          "colorName": "蒼綠",
-          "image": ""
-        },
-        {
-          "id": "dfff7d45-7934-4909-925e-eed3a38915dd",
-          "lot": "1326",
-          "colorName": "紫羅蘭",
-          "image": ""
-        },
-        {
-          "id": "f468a34d-8146-42b2-a0ec-c360f63651ad",
-          "lot": "1327",
-          "colorName": "初音未來",
-          "image": ""
-        },
-        {
-          "id": "20fd7cf8-ad00-484c-aba6-0ccf0eb9941d",
-          "lot": "1328",
-          "colorName": "淺粉",
-          "image": ""
-        },
-        {
-          "id": "9e6ef0bb-f780-4cfc-9eaa-a93030d7424c",
-          "lot": "1329",
-          "colorName": "亮桔",
-          "image": ""
-        },
-        {
-          "id": "0a8a8c10-2123-45df-8e01-027e9b104675",
-          "lot": "1330",
-          "colorName": "烏梅紫醬",
-          "image": ""
-        }
-      ]
+{
+          "brand": "萌娃娃 4股",
+          "colors": [
+                {
+                      "id": "f1b7c84c-24bb-484a-b580-af93fdd3b156",
+                      "lot": "01",
+                      "colorName": "白色",
+                      "image": "images/yarn/mengwawa-4/01.jpg"
+                },
+                {
+                      "id": "5007feec-352f-4bfd-aebe-b233c0ecbb8d",
+                      "lot": "02",
+                      "colorName": "奶白",
+                      "image": "images/yarn/mengwawa-4/02.jpg"
+                },
+                {
+                      "id": "6110bc64-bc40-4da7-bf0b-339990e8276b",
+                      "lot": "03",
+                      "colorName": "膚色",
+                      "image": "images/yarn/mengwawa-4/03.jpg"
+                },
+                {
+                      "id": "2b442012-23a5-481f-a35f-3e6338778445",
+                      "lot": "04",
+                      "colorName": "淺肉粉",
+                      "image": "images/yarn/mengwawa-4/04.jpg"
+                },
+                {
+                      "id": "964419dc-6dfa-4405-b554-8a6cdd4e25fb",
+                      "lot": "05",
+                      "colorName": "粉紅",
+                      "image": "images/yarn/mengwawa-4/05.jpg"
+                },
+                {
+                      "id": "b9c9c2d4-e883-4e81-a642-9be6b39eeecd",
+                      "lot": "06",
+                      "colorName": "深粉",
+                      "image": "images/yarn/mengwawa-4/06.jpg"
+                },
+                {
+                      "id": "db5af01e-3eab-4084-a86c-3b8034129605",
+                      "lot": "07",
+                      "colorName": "胭脂紅",
+                      "image": "images/yarn/mengwawa-4/07.jpg"
+                },
+                {
+                      "id": "51d77cd7-71c4-4d01-98b1-aa1fe06c81a2",
+                      "lot": "08",
+                      "colorName": "玫紅",
+                      "image": "images/yarn/mengwawa-4/08.jpg"
+                },
+                {
+                      "id": "ff03749f-ba4e-46c8-b44b-25a00b4ddd5c",
+                      "lot": "09",
+                      "colorName": "大紅",
+                      "image": "images/yarn/mengwawa-4/09.jpg"
+                },
+                {
+                      "id": "ec4b8581-a6ed-489e-87bb-6ded201741ec",
+                      "lot": "10",
+                      "colorName": "淺黃",
+                      "image": "images/yarn/mengwawa-4/10.jpg"
+                },
+                {
+                      "id": "07e5b823-4988-4459-a025-fa8894f942ad",
+                      "lot": "11",
+                      "colorName": "金黃",
+                      "image": "images/yarn/mengwawa-4/11.jpg"
+                },
+                {
+                      "id": "548e3e28-b4fe-4ee9-a744-4c7c391e67ac",
+                      "lot": "12",
+                      "colorName": "亮黃",
+                      "image": "images/yarn/mengwawa-4/12.jpg"
+                },
+                {
+                      "id": "92d0b8f4-58df-4a38-83fe-e5a619f5740e",
+                      "lot": "13",
+                      "colorName": "橘黃",
+                      "image": "images/yarn/mengwawa-4/13.jpg"
+                },
+                {
+                      "id": "5d8bcece-72e8-4f89-9fd4-dde765a0f8c5",
+                      "lot": "14",
+                      "colorName": "橘紅",
+                      "image": "images/yarn/mengwawa-4/14.jpg"
+                },
+                {
+                      "id": "f76750a7-7ddb-49d8-8246-b6c85a6cb9e9",
+                      "lot": "15",
+                      "colorName": "粉紫",
+                      "image": "images/yarn/mengwawa-4/15.jpg"
+                },
+                {
+                      "id": "8e97fb0d-4b34-4fce-8474-6e3ed197c6da",
+                      "lot": "16",
+                      "colorName": "紫色",
+                      "image": "images/yarn/mengwawa-4/16.jpg"
+                },
+                {
+                      "id": "82f7402e-75da-489c-a2e9-f239633a12f7",
+                      "lot": "17",
+                      "colorName": "若水",
+                      "image": "images/yarn/mengwawa-4/17.jpg"
+                },
+                {
+                      "id": "2a285e5d-3ad2-4611-aa41-80170e122065",
+                      "lot": "18",
+                      "colorName": "天藍",
+                      "image": "images/yarn/mengwawa-4/18.jpg"
+                },
+                {
+                      "id": "b727c985-1372-42a3-8e0d-3a9bb4db4349",
+                      "lot": "19",
+                      "colorName": "深藍",
+                      "image": "images/yarn/mengwawa-4/19.jpg"
+                },
+                {
+                      "id": "02ee0b92-e427-4a42-bcb4-2275aa29cf21",
+                      "lot": "20",
+                      "colorName": "寶藍",
+                      "image": "images/yarn/mengwawa-4/20.jpg"
+                },
+                {
+                      "id": "86a8760a-f169-46c6-b9ed-4696b2e07d86",
+                      "lot": "21",
+                      "colorName": "藏青",
+                      "image": "images/yarn/mengwawa-4/21.jpg"
+                },
+                {
+                      "id": "01f8926a-3cec-4199-bec0-46d664c4c3ea",
+                      "lot": "22",
+                      "colorName": "湖綠",
+                      "image": "images/yarn/mengwawa-4/22.jpg"
+                },
+                {
+                      "id": "74679325-4e0c-4ba7-8124-bcf7b07c590f",
+                      "lot": "23",
+                      "colorName": "祖母綠",
+                      "image": "images/yarn/mengwawa-4/23.jpg"
+                },
+                {
+                      "id": "042bbc8e-f8c1-44db-8e29-87d9c99f7a97",
+                      "lot": "24",
+                      "colorName": "嫩綠",
+                      "image": "images/yarn/mengwawa-4/24.jpg"
+                },
+                {
+                      "id": "1c13418f-f452-4297-bf68-117214691190",
+                      "lot": "25",
+                      "colorName": "芽綠",
+                      "image": "images/yarn/mengwawa-4/25.jpg"
+                },
+                {
+                      "id": "60dff6f5-59a1-4e7d-933b-68b799394d18",
+                      "lot": "26",
+                      "colorName": "軍綠",
+                      "image": "images/yarn/mengwawa-4/26.jpg"
+                },
+                {
+                      "id": "b6bf2c68-cba0-4473-ab5a-babd93caa64a",
+                      "lot": "27",
+                      "colorName": "翠綠",
+                      "image": "images/yarn/mengwawa-4/27.jpg"
+                },
+                {
+                      "id": "f36a93c0-d42d-42c7-813a-d4265f426191",
+                      "lot": "28",
+                      "colorName": "米色",
+                      "image": "images/yarn/mengwawa-4/28.jpg"
+                },
+                {
+                      "id": "5a35c494-043e-4c51-a8b3-9a77b602b9eb",
+                      "lot": "29",
+                      "colorName": "奶茶",
+                      "image": "images/yarn/mengwawa-4/29.jpg"
+                },
+                {
+                      "id": "be22a806-29c0-4a5a-9f21-b97ee6dcaebb",
+                      "lot": "30",
+                      "colorName": "黃棕",
+                      "image": "images/yarn/mengwawa-4/30.jpg"
+                },
+                {
+                      "id": "f828b870-a82c-4994-a28b-d86eb3b47869",
+                      "lot": "31",
+                      "colorName": "淺咖",
+                      "image": "images/yarn/mengwawa-4/31.jpg"
+                },
+                {
+                      "id": "4f7f1e99-dbf4-493f-b51b-4cbddaa1c0c2",
+                      "lot": "32",
+                      "colorName": "深咖",
+                      "image": "images/yarn/mengwawa-4/32.jpg"
+                },
+                {
+                      "id": "ff9094d7-b0b3-476f-bb57-f3bcf310f845",
+                      "lot": "33",
+                      "colorName": "灰色",
+                      "image": "images/yarn/mengwawa-4/33.jpg"
+                },
+                {
+                      "id": "1eefe9c1-d55d-4d45-a689-a6a117c677d3",
+                      "lot": "34",
+                      "colorName": "黑色",
+                      "image": "images/yarn/mengwawa-4/34.jpg"
+                },
+                {
+                      "id": "5b2e93e6-7f32-4380-bc71-b9389b6c3886",
+                      "lot": "35",
+                      "colorName": "麥香",
+                      "image": "images/yarn/mengwawa-4/35.jpg"
+                },
+                {
+                      "id": "85d7c7f2-533d-4721-ba8c-20601d76e62d",
+                      "lot": "36",
+                      "colorName": "淺灰",
+                      "image": "images/yarn/mengwawa-4/36.jpg"
+                },
+                {
+                      "id": "c3e86bdb-5a53-4621-b728-da9423146260",
+                      "lot": "37",
+                      "colorName": "肉色",
+                      "image": "images/yarn/mengwawa-4/37.jpg"
+                },
+                {
+                      "id": "e29c01bc-aaa9-4532-aea1-4e004cc00667",
+                      "lot": "38",
+                      "colorName": "煙紫",
+                      "image": "images/yarn/mengwawa-4/38.jpg"
+                },
+                {
+                      "id": "5f9ce27d-0829-4949-89e5-f866bd7ec32a",
+                      "lot": "39",
+                      "colorName": "橘色",
+                      "image": "images/yarn/mengwawa-4/39.jpg"
+                },
+                {
+                      "id": "a8d00344-4307-4e1d-86bf-c0a83dace4b1",
+                      "lot": "40",
+                      "colorName": "黃綠",
+                      "image": "images/yarn/mengwawa-4/40.jpg"
+                },
+                {
+                      "id": "ea1b646e-22ee-4e0e-b302-cffd885aff52",
+                      "lot": "41",
+                      "colorName": "間青",
+                      "image": "images/yarn/mengwawa-4/41.jpg"
+                },
+                {
+                      "id": "b4101027-3a55-41cb-8007-092685fd2b78",
+                      "lot": "42",
+                      "colorName": "牛仔藍",
+                      "image": "images/yarn/mengwawa-4/42.jpg"
+                },
+                {
+                      "id": "8f0fde3a-1eeb-4c3d-b4cb-bb51f179ec60",
+                      "lot": "43",
+                      "colorName": "櫻花粉",
+                      "image": "images/yarn/mengwawa-4/43.jpg"
+                },
+                {
+                      "id": "28f4153b-4c27-4019-a23f-20efd1045ae0",
+                      "lot": "44",
+                      "colorName": "珊瑚粉",
+                      "image": "images/yarn/mengwawa-4/44.jpg"
+                },
+                {
+                      "id": "95d01281-c29b-4ad2-abbe-cff8dd6dcb68",
+                      "lot": "45",
+                      "colorName": "群藍",
+                      "image": "images/yarn/mengwawa-4/45.jpg"
+                },
+                {
+                      "id": "d38cd25c-0118-4f20-90af-3be5e6399112",
+                      "lot": "46",
+                      "colorName": "靛藍",
+                      "image": "images/yarn/mengwawa-4/46.jpg"
+                },
+                {
+                      "id": "f5c5681e-67a1-4788-a81a-e99abe00c17a",
+                      "lot": "47",
+                      "colorName": "薄荷",
+                      "image": "images/yarn/mengwawa-4/47.jpg"
+                },
+                {
+                      "id": "21555fe7-1387-4548-9656-f74015e8b1bc",
+                      "lot": "48",
+                      "colorName": "秋黃",
+                      "image": "images/yarn/mengwawa-4/48.jpg"
+                },
+                {
+                      "id": "98acaed4-7a1f-4617-bd9a-0cd97b3bfc23",
+                      "lot": "49",
+                      "colorName": "深紫",
+                      "image": "images/yarn/mengwawa-4/49.jpg"
+                },
+                {
+                      "id": "2cd3d236-9c13-42fe-b381-8a9e6269376b",
+                      "lot": "50",
+                      "colorName": "深紅",
+                      "image": "images/yarn/mengwawa-4/50.jpg"
+                },
+                {
+                      "id": "cba6c6aa-e33b-44ac-8a64-36d00253b3b3",
+                      "lot": "51",
+                      "colorName": "乳白",
+                      "image": "images/yarn/mengwawa-4/51.jpg"
+                },
+                {
+                      "id": "fca81128-bb2f-490f-b575-b9f3666ff7bb",
+                      "lot": "52",
+                      "colorName": "桃紅",
+                      "image": "images/yarn/mengwawa-4/52.jpg"
+                },
+                {
+                      "id": "038f86b6-c6d0-4e6e-8776-d520a5a72139",
+                      "lot": "53",
+                      "colorName": "紫紅",
+                      "image": "images/yarn/mengwawa-4/53.jpg"
+                },
+                {
+                      "id": "de5f1500-0fe0-446b-aa13-5bf2771cef80",
+                      "lot": "54",
+                      "colorName": "森林綠",
+                      "image": "images/yarn/mengwawa-4/54.jpg"
+                },
+                {
+                      "id": "311d5b72-e004-4668-832f-c773c793c5d6",
+                      "lot": "55",
+                      "colorName": "淺軍綠",
+                      "image": "images/yarn/mengwawa-4/55.jpg"
+                },
+                {
+                      "id": "4e60c98b-5f78-44a4-b1b7-53781a16cec7",
+                      "lot": "56",
+                      "colorName": "淡雪青",
+                      "image": "images/yarn/mengwawa-4/56.jpg"
+                },
+                {
+                      "id": "2c9515eb-1271-4de3-a260-cd20123405d7",
+                      "lot": "57",
+                      "colorName": "雪青",
+                      "image": "images/yarn/mengwawa-4/57.jpg"
+                },
+                {
+                      "id": "fb6ec16f-0ff9-4d78-b5b8-3cf0141fa5be",
+                      "lot": "58",
+                      "colorName": "湖藍",
+                      "image": "images/yarn/mengwawa-4/58.jpg"
+                },
+                {
+                      "id": "698c1c0a-a9f5-454a-bf8c-26a6fee4a1e3",
+                      "lot": "59",
+                      "colorName": "仙蹤綠",
+                      "image": "images/yarn/mengwawa-4/59.jpg"
+                },
+                {
+                      "id": "be8c1dc2-a517-4425-92da-36ab94c49221",
+                      "lot": "60",
+                      "colorName": "淺棕",
+                      "image": "images/yarn/mengwawa-4/60.jpg"
+                },
+                {
+                      "id": "f84d2ff1-dafb-4e8c-af45-90f85adafcfd",
+                      "lot": "61",
+                      "colorName": "棕色",
+                      "image": "images/yarn/mengwawa-4/61.jpg"
+                },
+                {
+                      "id": "409ab463-80de-4f21-808c-38f1c2df215f",
+                      "lot": "62",
+                      "colorName": "紅棕",
+                      "image": "images/yarn/mengwawa-4/62.jpg"
+                },
+                {
+                      "id": "b9caf884-dea1-4bfc-9fa3-56ae0e7e2e0f",
+                      "lot": "63",
+                      "colorName": "小雞黃",
+                      "image": "images/yarn/mengwawa-4/63.jpg"
+                },
+                {
+                      "id": "cf1f74b7-5aa4-4b84-9201-aa72f1e444d8",
+                      "lot": "64",
+                      "colorName": "淺橘",
+                      "image": "images/yarn/mengwawa-4/64.jpg"
+                },
+                {
+                      "id": "1e7f7042-d92c-4993-908c-341a375f60c8",
+                      "lot": "65",
+                      "colorName": "菊粉",
+                      "image": "images/yarn/mengwawa-4/65.jpg"
+                },
+                {
+                      "id": "ddda743a-7815-4a8b-a5ee-6a5f2d577fbf",
+                      "lot": "66",
+                      "colorName": "酒紅",
+                      "image": "images/yarn/mengwawa-4/66.jpg"
+                },
+                {
+                      "id": "e0eb667e-5722-4cc7-9f2a-c12b1fff1bba",
+                      "lot": "67",
+                      "colorName": "淺羅馬紅",
+                      "image": "images/yarn/mengwawa-4/67.jpg"
+                }
+          ]
     },
     {
       "brand": "蘇禾 4股",
@@ -1108,10 +956,28 @@ const defaultData = {
   ],
   "brandWeights": {
     "未指定": 0,
-    "萌娃娃 4股": 0,
+    "萌娃娃 4股": 50,
     "蘇禾 4股": 0
   }
 };
+
+function defaultBrandImagePath(brand, lot) {
+  const folder = DEFAULT_BRAND_IMAGE_FOLDERS[brand];
+  const code = String(lot || "").trim();
+  return folder && code ? `${folder}/${encodeURIComponent(code)}.jpg` : "";
+}
+
+function applyDefaultBrandCardImages(data) {
+  (data.brandCards || []).forEach((card) => {
+    const folder = DEFAULT_BRAND_IMAGE_FOLDERS[card.brand];
+    if (!folder) return;
+    (card.colors || []).forEach((color) => {
+      color.image = color.image || defaultBrandImagePath(card.brand, color.lot);
+    });
+  });
+}
+
+applyDefaultBrandCardImages(defaultData);
 
 const DEFAULT_BRANDS = defaultData.brands;
 const defaultStitches = defaultData.stitches;
@@ -1633,15 +1499,21 @@ function normalizeState(input) {
     url: tool.url || ""
   }));
 
-  next.brandCards = next.brandCards.map((card) => ({
-    brand: mergedBrandName(card.brand || ""),
-    colors: Array.isArray(card.colors) ? card.colors.map((color) => ({
-      id: color.id || crypto.randomUUID(),
-      colorName: color.colorName || color.name || "",
-      lot: color.lot || "",
-      image: color.image || ""
-    })).filter((color) => color.colorName || color.lot || color.image) : []
-  })).filter((card) => card.brand);
+  next.brandCards = next.brandCards.map((card) => {
+    const brand = mergedBrandName(card.brand || "");
+    return {
+      brand,
+      colors: Array.isArray(card.colors) ? card.colors.map((color) => {
+        const lot = color.lot || "";
+        return {
+          id: color.id || crypto.randomUUID(),
+          colorName: color.colorName || color.name || "",
+          lot,
+          image: color.image || defaultBrandImagePath(brand, lot)
+        };
+      }).filter((color) => color.colorName || color.lot || color.image) : []
+    };
+  }).filter((card) => card.brand);
   next.brands.forEach((brand) => {
     if (brand !== DEFAULT_BRAND && !next.brandCards.some((card) => card.brand === brand)) {
       next.brandCards.push({ brand, colors: [] });
@@ -1831,6 +1703,7 @@ function parseImportedItems(text) {
 function parseTextPattern(text) {
   const parts = [];
   const unparsed = [];
+  let importedName = "";
   let currentPart = null;
   const ensurePart = (name = "文字匯入") => {
     if (!currentPart) {
@@ -1842,6 +1715,12 @@ function parseTextPattern(text) {
   String(text).split(/\r?\n/).forEach((line, index) => {
     const raw = line.trim();
     if (!raw) return;
+    const nameMatch = raw.match(/^織圖\s*[:：]\s*(.+)$/);
+    if (nameMatch) {
+      importedName = nameMatch[1].trim();
+      return;
+    }
+    if (/^-{3,}$/.test(raw)) return;
     const match = raw.match(/^(?:R|第)?\s*(\d+)(?:\s*[-~～－]\s*(\d+))?(?:\s*[圈段])?(?::|：|\s+)\s*(.+)$/i);
     if (!match) {
       if (/^[\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9\s_-]*$/.test(raw)) {
@@ -1867,7 +1746,7 @@ function parseTextPattern(text) {
   });
   const validParts = parts.filter((part) => part.segments.length);
   parts.filter((part) => !part.segments.length).forEach((part) => unparsed.push(`部分「${part.name}」沒有可辨識段落`));
-  return { parts: validParts, segments: validParts.flatMap((part) => part.segments), unparsed };
+  return { name: importedName, parts: validParts, segments: validParts.flatMap((part) => part.segments), unparsed };
 }
 
 function findStitch(value) {
@@ -2270,26 +2149,53 @@ function importPatternPayload(payload) {
   return [importPatternPackage(payload)];
 }
 
-function downloadPatternBundle(patterns) {
-  const payload = patternBundlePackage(patterns);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
+function patternItemsToText(items = []) {
+  return items.map(compactItemDisplay).join(",");
+}
+
+function patternToText(pattern) {
+  const lines = [`織圖：${pattern.name || "未命名織圖"}`];
+  (pattern.parts || []).forEach((part) => {
+    lines.push("", part.name || "部分");
+    let round = 1;
+    (part.segments || []).forEach((segment) => {
+      const repeat = Math.max(1, Number(segment.repeat || 1));
+      const label = repeat > 1 ? `R${round}-${round + repeat - 1}` : `R${round}`;
+      const text = patternItemsToText(segment.items || []);
+      if (text) lines.push(`${label} ${text}`);
+      round += repeat;
+    });
+  });
+  return `${lines.join("\n").trim()}\n`;
+}
+
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${patterns.length}個織圖.txt`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
 }
 
+function downloadPatternBundle(patterns) {
+  downloadTextFile(`${patterns.length}個織圖.txt`, patterns.map(patternToText).join("\n---\n\n"));
+}
+
 function downloadPattern(pattern) {
-  const payload = patternSharePackage(pattern);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${pattern.name || "織圖"}-織圖.txt`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadTextFile(`${pattern.name || "織圖"}-織圖.txt`, patternToText(pattern));
+}
+
+async function copyPatternText(patterns) {
+  const text = patterns.map(patternToText).join("\n---\n\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    alert(patterns.length > 1 ? `已複製 ${patterns.length} 個織圖文字，可以貼到 LINE。` : "已複製織圖文字，可以貼到 LINE。");
+  } catch {
+    downloadTextFile(patterns.length > 1 ? `${patterns.length}個織圖.txt` : `${patterns[0]?.name || "織圖"}-織圖.txt`, text);
+    alert("無法直接複製到剪貼簿，已改成下載文字檔。");
+  }
 }
 
 function downloadFullBackup() {
@@ -4017,14 +3923,7 @@ els.sharePatternBtn.addEventListener("click", async () => {
   if (!patterns.length) return;
   els.patternActionModal.classList.add("hidden");
   selectedPatternIds.clear();
-  if (patterns.length > 1) {
-    downloadPatternBundle(patterns);
-    renderPatterns();
-    return;
-  }
-  for (const pattern of patterns) {
-    await sharePattern(pattern);
-  }
+  await copyPatternText(patterns);
   renderPatterns();
 });
 els.deletePatternFromListBtn.addEventListener("click", () => {
@@ -4049,7 +3948,16 @@ els.closePatternActionModal.addEventListener("click", () => {
   els.patternActionModal.classList.add("hidden");
   renderPatterns();
 });
-els.openPatternImportBtn.addEventListener("click", () => els.patternImportModal.classList.remove("hidden"));
+function openTextPatternImporter() {
+  els.textPatternName.value = "";
+  els.textPatternInput.value = "";
+  els.textPatternUnparsed.classList.add("hidden");
+  els.textPatternUnparsed.innerHTML = "";
+  els.textPatternReference.textContent = state.stitches.map((stitch) => `${stitch.zh}=${stitch.letter}`).join("、");
+  els.textPatternModal.classList.remove("hidden");
+}
+
+els.openPatternImportBtn.addEventListener("click", openTextPatternImporter);
 els.closePatternImportModal.addEventListener("click", () => els.patternImportModal.classList.add("hidden"));
 els.importPatternBtn.addEventListener("click", () => {
   els.patternImportModal.classList.add("hidden");
@@ -4057,18 +3965,13 @@ els.importPatternBtn.addEventListener("click", () => {
 });
 els.importTextPatternBtn.addEventListener("click", () => {
   els.patternImportModal.classList.add("hidden");
-  els.textPatternName.value = "";
-  els.textPatternInput.value = "";
-  els.textPatternUnparsed.classList.add("hidden");
-  els.textPatternUnparsed.innerHTML = "";
-  els.textPatternReference.textContent = state.stitches.map((stitch) => `${stitch.zh}=${stitch.letter}`).join("、");
-  els.textPatternModal.classList.remove("hidden");
+  openTextPatternImporter();
 });
 els.closeTextPatternModal.addEventListener("click", () => els.textPatternModal.classList.add("hidden"));
 els.convertTextPatternBtn.addEventListener("click", () => {
-  const name = (els.textPatternName.value.trim() || "文字匯入織圖");
-  if (warnDuplicateName(name, templatePatterns(), "織圖", (pattern) => pattern.name)) return;
   const result = parseTextPattern(els.textPatternInput.value);
+  const name = (els.textPatternName.value.trim() || result.name || "文字匯入織圖");
+  if (warnDuplicateName(name, templatePatterns(), "織圖", (pattern) => pattern.name)) return;
   if (!result.parts.length) {
     els.textPatternUnparsed.classList.remove("hidden");
     els.textPatternUnparsed.innerHTML = `<strong>沒有成功辨識的段落</strong>${result.unparsed.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}`;
