@@ -47,7 +47,7 @@
           </div>
           <article class="detail-hero">
             <label class="photo-picker large" id="projectPhotoPicker">
-              <input id="projectPhotoInput" type="file" accept="image/*" />
+              <input id="projectPhotoInput" type="file" accept="image/*" multiple />
               <img id="projectPhoto" alt="作品照片" />
               <span>加入作品圖片</span>
             </label>
@@ -61,6 +61,7 @@
               <p id="detailProgressText">尚未開始</p>
             </div>
           </article>
+          <div class="image-strip project-image-strip" id="projectImages"></div>
 
           <section class="section-header inline">
             <h2>織圖</h2>
@@ -81,6 +82,10 @@
                   <option>棒針</option>
                   <option>混合</option>
                 </select>
+              </label>
+              <label>
+                資料夾
+                <input id="projectFolder" autocomplete="off" placeholder="例：禮物、待完成" />
               </label>
               <label>
                 織圖模板
@@ -123,6 +128,7 @@
               <div class="legend-list" id="legendList"></div>
             </details>
 
+            <div class="part-progress-list" id="partProgressList"></div>
             <div class="written-pattern" id="writtenPattern"></div>
           </section>
 
@@ -154,8 +160,9 @@
                 <option value="rounds-asc">段數少</option>
               </select>
               <button class="outline-button compact" id="importPatternBtn">匯入</button>
+              <button class="outline-button compact" id="importTextPatternBtn">文字匯入</button>
               <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
-              <input class="hidden" id="patternImportInput" type="file" accept="application/json,.json,.gogopattern" />
+              <input class="hidden" id="patternImportInput" type="file" accept="application/json,.json,.gogopattern,.gogopatterns" />
             </div>
           </div>
           <div class="pattern-list" id="patternList"></div>
@@ -179,6 +186,10 @@
               參考連結
               <input id="patternSource" />
             </label>
+            <label class="wide-field">
+              備註
+              <textarea id="patternNotes" rows="2"></textarea>
+            </label>
             <label>
               使用線材
               <div class="multi-select" id="patternYarns"></div>
@@ -187,6 +198,7 @@
               使用消耗品
               <div class="multi-select" id="patternSupplies"></div>
             </label>
+            <div class="wide-field supply-usage-list" id="patternSupplyUsageList"></div>
             <label>
               使用工具
               <div class="multi-select" id="patternTools"></div>
@@ -232,7 +244,9 @@
         <section class="view" id="stashView">
           <div class="section-header">
             <h2>庫存</h2>
-            <button class="primary-button compact" id="newYarnBtn">+ 新增</button>
+            <div class="inline-actions">
+              <button class="primary-button compact" id="newYarnBtn">+ 新增</button>
+            </div>
           </div>
           <div class="segmented-control" id="stockTypeTabs">
             <button class="active" data-stock-type="yarn">線材</button>
@@ -248,7 +262,7 @@
           </div>
           <form class="form-grid" id="yarnForm">
             <label class="photo-tile wide-field">
-              <input id="yarnImageInput" type="file" accept="image/*" />
+              <input id="yarnImageInput" type="file" accept="image/*" multiple />
               <span>+ 新增圖片</span>
             </label>
             <div class="image-strip wide-field" id="yarnImagePreview"></div>
@@ -264,11 +278,7 @@
               <input id="yarnColorName" placeholder="例：奶茶、霧灰、櫻桃紅" />
             </label>
             <label>
-              分類
-              <select id="yarnCategory"></select>
-            </label>
-            <label>
-              品牌
+              品牌分類
               <select id="yarnBrand"></select>
             </label>
             <label>
@@ -278,6 +288,17 @@
             <label>
               數量
               <input id="yarnAmount" type="number" min="0" />
+            </label>
+            <label id="yarnUnitLabel">
+              單位
+              <input id="yarnUnit" list="unitOptions" placeholder="個" />
+              <datalist id="unitOptions">
+                <option value="個"></option>
+                <option value="包"></option>
+                <option value="顆"></option>
+                <option value="組"></option>
+                <option value="片"></option>
+              </datalist>
             </label>
             <label>
               重量 g
@@ -311,7 +332,6 @@
             <label>
               計數時顯示
               <select id="displayMode">
-                <option value="abbr">美式英文縮寫</option>
                 <option value="zh">中文</option>
                 <option value="letter">簡計</option>
               </select>
@@ -338,7 +358,9 @@
 
           <details class="settings-card settings-details">
             <summary>針法</summary>
-            <div class="settings-action-row">
+            <div class="stitch-add-grid">
+              <input id="newStitchZh" placeholder="中文名稱" />
+              <input id="newStitchLetter" placeholder="簡計" />
               <button class="primary-button compact" id="addStitchBtn">+ 新增</button>
             </div>
             <div class="stitch-editor-list" id="stitchEditorList"></div>
@@ -348,18 +370,10 @@
             <summary>線材品牌</summary>
             <div class="brand-add-row">
               <input id="newBrandName" placeholder="新增品牌名稱" />
+              <input id="newBrandCategory" placeholder="分類" />
               <button class="primary-button compact" id="addBrandBtn">+ 新增</button>
             </div>
             <div class="brand-list" id="brandList"></div>
-          </details>
-
-          <details class="settings-card settings-details">
-            <summary>線材分類</summary>
-            <div class="brand-add-row">
-              <input id="newCategoryName" placeholder="新增分類名稱" />
-              <button class="primary-button compact" id="addCategoryBtn">+ 新增</button>
-            </div>
-            <div class="brand-list" id="categoryList"></div>
           </details>
 
           <details class="settings-card settings-details">
@@ -380,7 +394,7 @@
           </details>
 
           <details class="settings-card settings-details">
-            <summary>工具</summary>
+            <summary>工具總覽</summary>
             <div class="tool-add-grid">
               <input id="newToolName" placeholder="工具名稱" />
               <input id="newToolBrand" placeholder="品牌" />
@@ -392,6 +406,11 @@
 
           <details class="settings-card settings-details danger-settings">
             <summary>資料管理</summary>
+            <div class="button-row data-actions">
+              <button class="outline-button" id="backupDataBtn">備份完整資料</button>
+              <button class="outline-button" id="restoreDataBtn">匯入完整備份</button>
+              <input class="hidden" id="restoreDataInput" type="file" accept="application/json,.json,.gogobackup" />
+            </div>
             <p class="warning-text">清除後會刪除這台裝置裡的所有作品、織圖與庫存，並回到目前 APP 內建的預設設定。這個動作無法復原。</p>
             <button class="danger-button full-width" id="resetDataBtn">清除所有資料</button>
           </details>
@@ -404,6 +423,7 @@
             <h2>選擇織圖</h2>
             <button class="header-icon" id="closeAttachModal">×</button>
           </div>
+          <input class="modal-search" id="attachPatternSearch" placeholder="搜尋織圖" />
           <div class="pattern-list" id="attachPatternOptions"></div>
         </div>
       </div>
@@ -447,8 +467,98 @@
           </div>
           <div class="button-row modal-actions">
             <button class="outline-button" id="pinProjectBtn">置頂</button>
+            <button class="outline-button" id="folderProjectBtn">加入資料夾</button>
+            <button class="outline-button hidden" id="removeProjectFolderBtn">移出資料夾</button>
+            <button class="outline-button" id="completeProjectFromListBtn">標註為已完成</button>
             <button class="danger-button" id="deleteProjectFromListBtn">刪除</button>
           </div>
+        </div>
+      </div>
+
+      <div class="modal floating-action-modal hidden" id="folderActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="folderActionTitle">資料夾選項</h2>
+            <button class="header-icon" id="closeFolderActionModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="pinFolderBtn">置頂</button>
+            <button class="danger-button" id="deleteFolderBtn">刪除資料夾與作品</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="projectFolderModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>選擇資料夾</h2>
+            <button class="header-icon" id="closeProjectFolderModal">×</button>
+          </div>
+          <div class="folder-option-list" id="projectFolderOptions"></div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="newProjectFolderBtn">新增資料夾</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="stockCreateModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>新增庫存</h2>
+            <button class="header-icon" id="closeStockCreateModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="primary-button" id="createSingleStockBtn">新增一個</button>
+            <button class="outline-button" id="openBulkStockBtn">新增多個</button>
+            <button class="outline-button" id="openColorCardStockBtn">新增已有品牌色卡</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="bulkStockModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>新增同品牌多個</h2>
+            <button class="header-icon" id="closeBulkStockModal">×</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              類型
+              <select id="bulkStockType">
+                <option value="yarn">線材</option>
+              </select>
+            </label>
+            <label>
+              品牌分類
+              <select id="bulkStockBrand"></select>
+            </label>
+            <label>
+              重量 g
+              <input id="bulkStockWeight" type="number" min="0" />
+            </label>
+            <label class="wide-field">
+              購買連結
+              <input id="bulkStockUrl" type="url" />
+            </label>
+          </div>
+          <div class="segment-list bulk-stock-rows" id="bulkStockRows"></div>
+          <button class="outline-button full-width" id="addBulkStockRowBtn">+ 新增一筆</button>
+          <button class="primary-button full-width" id="saveBulkStockBtn">完成新增</button>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="colorCardStockModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>從色卡新增線材</h2>
+            <button class="header-icon" id="closeColorCardStockModal">×</button>
+          </div>
+          <label>
+            品牌
+            <select id="colorCardStockBrand"></select>
+          </label>
+          <div class="color-card-select-list" id="colorCardStockList"></div>
+          <button class="primary-button full-width" id="addColorCardStockBtn">加入庫存</button>
         </div>
       </div>
 
@@ -490,6 +600,39 @@
         </div>
       </div>
 
+      <div class="modal hidden" id="brandCardModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="brandCardTitle">品牌色卡</h2>
+            <button class="header-icon" id="closeBrandCardModal">×</button>
+          </div>
+          <div class="brand-card-entry-row">
+            <label class="photo-tile compact-photo-tile">
+              <input id="brandCardImageInput" type="file" accept="image/*" />
+              <span>圖片</span>
+            </label>
+            <input id="brandCardLot" placeholder="色碼，例：A101" />
+            <input id="brandCardColorName" placeholder="顏色，例：奶茶" />
+            <button class="primary-button compact" id="addBrandCardColorBtn">+ 新增</button>
+          </div>
+          <details class="reference-box">
+            <summary>批量新增色號</summary>
+            <div class="brand-card-batch-grid">
+              <input id="brandCardBatchPrefix" placeholder="共同碼，例：A" />
+              <input id="brandCardBatchStart" inputmode="numeric" placeholder="起始，例：001" />
+              <input id="brandCardBatchEnd" inputmode="numeric" placeholder="結束，例：099" />
+              <button class="outline-button compact" id="addBrandCardBatchBtn">+ 批量新增</button>
+            </div>
+          </details>
+          <details class="reference-box">
+            <summary>文字匯入色卡</summary>
+            <textarea id="brandCardTextInput" rows="5" placeholder="01白色&#10;02奶白&#10;03膚色"></textarea>
+            <button class="outline-button full-width" id="importBrandCardTextBtn">+ 匯入文字色卡</button>
+          </details>
+          <div class="brand-card-color-list" id="brandCardColorList"></div>
+        </div>
+      </div>
+
       <div class="modal hidden" id="commonGroupEditModal">
         <div class="modal-sheet">
           <div class="section-header">
@@ -519,13 +662,39 @@
         </div>
       </div>
 
+      <div class="modal hidden" id="textPatternModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>文字匯入織圖</h2>
+            <button class="header-icon" id="closeTextPatternModal">×</button>
+          </div>
+          <details class="reference-box">
+            <summary>參考針法與格式</summary>
+            <p>每個中文標題會建立一個部分；部分下面可輸入 R1、R2 或 R3-9。</p>
+            <p>例：身體 / R1 6X,V,A / R2 3(2X,A,2X) / 手 / R1 12X。</p>
+            <p>可用格式：6X、X x 6、3(2X,A,2X)、2(5X,W)，也可用逗號分隔針法。</p>
+            <p id="textPatternReference"></p>
+          </details>
+          <label>
+            織圖名稱
+            <input id="textPatternName" placeholder="例：小熊身體" />
+          </label>
+          <label class="wide-field">
+            貼上文字織圖
+            <textarea id="textPatternInput" rows="8" placeholder="身體&#10;R1 6X,V,A&#10;R2 3(2X,A,2X)&#10;R3-9 V,2(5X,W),5X,X&#10;手&#10;R1 12X&#10;R2 2X,A,10V"></textarea>
+          </label>
+          <button class="primary-button full-width" id="convertTextPatternBtn">匯入成織圖</button>
+          <div class="unparsed-list hidden" id="textPatternUnparsed"></div>
+        </div>
+      </div>
+
       <div class="modal hidden" id="supplyDeductModal">
         <div class="modal-sheet">
           <div class="section-header">
-            <h2>扣除消耗品</h2>
+            <h2>扣除庫存</h2>
             <button class="header-icon" id="closeSupplyDeductModal">×</button>
           </div>
-          <p class="warning-text">請選擇這次作品用掉的顏色與數量。按下確認後會從庫存扣除，數量不會扣到低於 0。</p>
+          <p class="warning-text">請確認這次作品用掉的線材與消耗品。毛線預設 0，消耗品會帶入織圖設定的用量；按下確認後會從庫存扣除，數量不會扣到低於 0。</p>
           <div class="supply-deduct-list" id="supplyDeductList"></div>
           <div class="button-row modal-actions">
             <button class="outline-button" id="skipSupplyDeductBtn">不扣除</button>
@@ -541,15 +710,15 @@
 
       <nav class="bottom-nav" aria-label="主要功能">
         <button class="nav-tab active" data-view="projects">
-          <span>□</span>
+          <span>⌂</span>
           <span>作品</span>
         </button>
         <button class="nav-tab" data-view="patterns">
-          <span>Aa</span>
+          <span>☷</span>
           <span>織圖</span>
         </button>
         <button class="nav-tab" data-view="stash">
-          <span>◌</span>
+          <span>◈</span>
           <span>庫存</span>
         </button>
         <button class="nav-tab" data-view="settings">
