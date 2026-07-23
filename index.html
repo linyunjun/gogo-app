@@ -161,7 +161,7 @@
               </select>
               <button class="outline-button compact" id="openPatternImportBtn">匯入</button>
               <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
-              <input class="hidden" id="patternImportInput" type="file" accept="application/json,.json,.gogopattern,.gogopatterns" />
+              <input class="hidden" id="patternImportInput" type="file" accept="application/json,text/plain,.json,.txt,.gogopattern,.gogopatterns" />
             </div>
           </div>
           <div class="pattern-list" id="patternList"></div>
@@ -369,7 +369,10 @@
             <summary>線材品牌</summary>
             <div class="brand-add-row">
               <input id="newBrandName" placeholder="新增品牌名稱" />
+              <input id="newBrandCategory" placeholder="分類，例：4股" />
               <button class="primary-button compact" id="addBrandBtn">+ 新增</button>
+              <button class="outline-button compact" id="importBrandBtn">+ 匯入</button>
+              <input class="hidden" id="importBrandInput" type="file" accept="application/json,text/plain,.json,.txt,.gogobrand" />
             </div>
             <div class="brand-list" id="brandList"></div>
           </details>
@@ -408,7 +411,7 @@
               <button class="outline-button" id="backupDataBtn">備份完整資料</button>
               <button class="outline-button" id="restoreDataBtn">匯入完整備份</button>
               <button class="outline-button" id="updateAppBtn">更新 APP</button>
-              <input class="hidden" id="restoreDataInput" type="file" accept="application/json,.json,.gogobackup" />
+              <input class="hidden" id="restoreDataInput" type="file" accept="application/json,text/plain,.json,.txt,.gogobackup" />
             </div>
             <p class="muted">更新 APP 只會重新抓取程式檔案，不會刪除作品、織圖或庫存資料。</p>
             <p class="warning-text">清除後會刪除這台裝置裡的所有作品、織圖與庫存，並回到目前 APP 內建的預設設定。這個動作無法復原。</p>
@@ -621,6 +624,7 @@
         <div class="modal-sheet">
           <div class="section-header">
             <h2 id="brandCardTitle">品牌色卡</h2>
+            <button class="outline-button compact" id="exportBrandCardBtn">匯出</button>
             <button class="header-icon" id="closeBrandCardModal">×</button>
           </div>
           <div class="form-grid compact-form">
@@ -640,8 +644,14 @@
             </label>
             <input id="brandCardLot" placeholder="色碼，例：A101" />
             <input id="brandCardColorName" placeholder="顏色，例：奶茶" />
+            <input id="brandCardImageUrl" placeholder="圖片網址" />
             <button class="primary-button compact" id="addBrandCardColorBtn">+ 新增</button>
           </div>
+          <details class="reference-box">
+            <summary>套用圖片資料夾網址</summary>
+            <input id="brandCardFolderUrl" placeholder="https://linyunjun.github.io/gogo-app/images/yarn/suho-4" />
+            <button class="outline-button full-width" id="applyBrandCardFolderBtn">套用到所有色號</button>
+          </details>
           <details class="reference-box">
             <summary>批量新增色號</summary>
             <div class="brand-card-batch-grid">
@@ -653,7 +663,7 @@
           </details>
           <details class="reference-box">
             <summary>文字匯入色卡</summary>
-            <textarea id="brandCardTextInput" rows="5" placeholder="01白色&#10;02奶白&#10;03膚色"></textarea>
+            <textarea id="brandCardTextInput" rows="5" placeholder="01白色&#10;02奶白 https://.../02.jpg&#10;03 膚色 https://.../03.jpg"></textarea>
             <button class="outline-button full-width" id="importBrandCardTextBtn">+ 匯入文字色卡</button>
           </details>
           <div class="brand-card-color-list" id="brandCardColorList"></div>

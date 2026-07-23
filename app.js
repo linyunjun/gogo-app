@@ -3,6 +3,10 @@ const OLD_KEYS = ["free-knit-workbench-v2", "free-knit-workbench-v1"];
 const PATTERN_SHARE_VERSION = 1;
 const DEFAULT_BRAND = "未指定";
 const DEFAULT_CATEGORY = "未分類";
+const PUBLIC_ASSET_BASE = "https://linyunjun.github.io/gogo-app/";
+const IMAGE_MAX_SIZE = 900;
+const IMAGE_QUALITY = 0.72;
+let storageWarningShown = false;
 
 const defaultData = {
   "settings": {
@@ -1271,7 +1275,10 @@ const els = {
   addStitchBtn: document.querySelector("#addStitchBtn"),
   stitchEditorList: document.querySelector("#stitchEditorList"),
   newBrandName: document.querySelector("#newBrandName"),
+  newBrandCategory: document.querySelector("#newBrandCategory"),
   addBrandBtn: document.querySelector("#addBrandBtn"),
+  importBrandBtn: document.querySelector("#importBrandBtn"),
+  importBrandInput: document.querySelector("#importBrandInput"),
   brandList: document.querySelector("#brandList"),
   newProjectTypeName: document.querySelector("#newProjectTypeName"),
   addProjectTypeBtn: document.querySelector("#addProjectTypeBtn"),
@@ -1297,11 +1304,15 @@ const els = {
   brandCardModal: document.querySelector("#brandCardModal"),
   closeBrandCardModal: document.querySelector("#closeBrandCardModal"),
   brandCardTitle: document.querySelector("#brandCardTitle"),
+  exportBrandCardBtn: document.querySelector("#exportBrandCardBtn"),
   brandCardCategory: document.querySelector("#brandCardCategory"),
   brandCardWeight: document.querySelector("#brandCardWeight"),
   brandCardColorName: document.querySelector("#brandCardColorName"),
   brandCardLot: document.querySelector("#brandCardLot"),
   brandCardImageInput: document.querySelector("#brandCardImageInput"),
+  brandCardImageUrl: document.querySelector("#brandCardImageUrl"),
+  brandCardFolderUrl: document.querySelector("#brandCardFolderUrl"),
+  applyBrandCardFolderBtn: document.querySelector("#applyBrandCardFolderBtn"),
   addBrandCardColorBtn: document.querySelector("#addBrandCardColorBtn"),
   brandCardBatchPrefix: document.querySelector("#brandCardBatchPrefix"),
   brandCardBatchStart: document.querySelector("#brandCardBatchStart"),
@@ -1696,7 +1707,18 @@ function normalizeGroupItems(group, fallbackId = "sc") {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error("Save failed", error);
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      alert("手機儲存空間不足，這次新增的圖片可能不會保留。請減少圖片數量或先備份完整資料。");
+      window.setTimeout(() => {
+        storageWarningShown = false;
+      }, 1500);
+    }
+  }
 }
 
 function currentProject() {
@@ -2250,22 +2272,22 @@ function importPatternPayload(payload) {
 
 function downloadPatternBundle(patterns) {
   const payload = patternBundlePackage(patterns);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${patterns.length}個織圖.gogopatterns`;
+  link.download = `${patterns.length}個織圖.txt`;
   link.click();
   URL.revokeObjectURL(url);
 }
 
 function downloadPattern(pattern) {
   const payload = patternSharePackage(pattern);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${pattern.name || "織圖"}.gogopattern`;
+  link.download = `${pattern.name || "織圖"}-織圖.txt`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -2277,13 +2299,63 @@ function downloadFullBackup() {
     exportedAt: new Date().toISOString(),
     state
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `gogo-backup-${new Date().toISOString().slice(0, 10)}.gogobackup`;
+  link.download = `gogo-backup-${new Date().toISOString().slice(0, 10)}.txt`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function brandCardPackage(brand) {
+  const card = state.brandCards.find((item) => item.brand === brand) || { brand, colors: [] };
+  return {
+    type: "gogo-brand-card",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    brand,
+    weight: brandWeight(brand),
+    colors: structuredClone(card.colors || [])
+  };
+}
+
+function downloadBrandCard(brand) {
+  if (!brand) return;
+  const payload = brandCardPackage(brand);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${brand || "線材品牌"}-色卡.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBrandCardPackage(payload) {
+  const brand = String(payload?.brand || payload?.card?.brand || "").trim();
+  const colors = payload?.colors || payload?.card?.colors || [];
+  if (payload?.type !== "gogo-brand-card" || !brand || !Array.isArray(colors)) {
+    throw new Error("這不是可匯入的線材品牌檔");
+  }
+  if (brand === DEFAULT_BRAND) throw new Error("未指定品牌不需要匯入。");
+  const exists = state.brands.includes(brand);
+  if (exists && !confirm(`已經有「${brand}」，要覆蓋它的色卡資料嗎？`)) return null;
+  if (!exists) state.brands.push(brand);
+  state.brandWeights[brand] = Number(payload.weight || payload.brandWeight || 0);
+  const normalizedColors = colors
+    .map((color) => ({
+      id: color.id || crypto.randomUUID(),
+      lot: color.lot || "",
+      colorName: color.colorName || "",
+      image: color.image || ""
+    }))
+    .filter((color) => color.lot || color.colorName || color.image);
+  state.brandCards = state.brandCards.filter((card) => card.brand !== brand);
+  state.brandCards.push({ brand, colors: normalizedColors });
+  selectedBrandName = brand;
+  saveState();
+  return brand;
 }
 
 function restoreFullBackup(payload) {
@@ -3180,12 +3252,14 @@ function brandCard(brand = selectedBrandName) {
 
 function openBrandCardEditor(brand) {
   selectedBrandName = brand;
-  els.brandCardTitle.textContent = `${brand} 色卡`;
+  els.brandCardTitle.textContent = brand;
   const parsed = splitBrandCategory(brand);
   els.brandCardCategory.value = parsed.category;
   els.brandCardWeight.value = Number(state.brandWeights?.[brand] || 0);
   els.brandCardColorName.value = "";
   els.brandCardLot.value = "";
+  els.brandCardImageUrl.value = "";
+  els.brandCardFolderUrl.value = "";
   els.brandCardBatchPrefix.value = "";
   els.brandCardBatchStart.value = "";
   els.brandCardBatchEnd.value = "";
@@ -3218,7 +3292,7 @@ function renameBrandFromCardSettings() {
     selectedBrandName = newName;
   }
   state.brandWeights[selectedBrandName] = Number(els.brandCardWeight.value || 0);
-  els.brandCardTitle.textContent = `${selectedBrandName} 色卡`;
+  els.brandCardTitle.textContent = selectedBrandName;
   saveState();
   renderSettings();
 }
@@ -3226,17 +3300,49 @@ function renameBrandFromCardSettings() {
 function renderBrandCardEditor() {
   const card = brandCard();
   if (!card) return;
+  card.colors.forEach((color) => {
+    color.image = absoluteAssetUrl(color.image);
+  });
   els.brandCardColorList.innerHTML = card.colors.length ? card.colors.map((color) => `
     <article class="brand-card-color-row">
       <label class="brand-card-image-cell">
         <input type="file" accept="image/*" data-brand-color-image="${color.id}">
-        ${color.image ? `<img src="${color.image}" alt="">` : `<span class="empty-thumb">圖</span>`}
+        ${color.image ? `<img src="${absoluteAssetUrl(color.image)}" alt="">` : `<span class="empty-thumb">圖</span>`}
       </label>
       <input value="${escapeHtml(color.lot || "")}" placeholder="色碼" data-brand-color-field="${color.id}:lot">
       <input value="${escapeHtml(color.colorName || "")}" placeholder="顏色" data-brand-color-field="${color.id}:colorName">
+      <input value="${escapeHtml(absoluteAssetUrl(color.image))}" placeholder="圖片網址" data-brand-color-field="${color.id}:image">
       <button class="text-button" data-remove-brand-color="${color.id}">刪除</button>
     </article>
   `).join("") : `<p class="empty-note">尚未新增色卡。</p>`;
+}
+
+function absoluteAssetUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  if (/^:?\/\//.test(raw)) return `https://${raw.replace(/^:?\/\//, "")}`;
+  const normalized = raw.replace(/\\/g, "/");
+  const assetMatch = normalized.match(/(?:^|\/)(images\/.+)$/i);
+  const clean = (assetMatch ? assetMatch[1] : normalized).replace(/^\.?\//, "");
+  const base = location.protocol === "http:" || location.protocol === "https:"
+    ? new URL("./", location.href).toString()
+    : PUBLIC_ASSET_BASE;
+  return new URL(clean, base).toString();
+}
+
+function folderUrlFromInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const withoutFile = raw.replace(/\/[^/]+\.(jpg|jpeg|png|webp|gif)$/i, "");
+  return absoluteAssetUrl(withoutFile).replace(/\/+$/, "");
+}
+
+function imageUrlFromFolder(folderUrl, lot) {
+  const base = folderUrlFromInput(folderUrl);
+  const code = String(lot || "").trim();
+  if (!base || !code) return "";
+  return `${base}/${encodeURIComponent(code)}.jpg`;
 }
 
 function paddedRangeLots(prefix, startText, endText) {
@@ -3258,7 +3364,14 @@ function parseBrandCardText(text) {
       skipped.push(`第 ${index + 1} 行：${raw}`);
       return;
     }
-    rows.push({ lot: match[1].trim(), colorName: match[2].trim(), image: "" });
+    let rest = match[2].trim();
+    let image = "";
+    const urlMatch = rest.match(/(?:https?:\/\/|images\/|\.?\/images\/)\S+$/);
+    if (urlMatch) {
+      image = absoluteAssetUrl(urlMatch[0]);
+      rest = rest.slice(0, urlMatch.index).trim();
+    }
+    rows.push({ lot: match[1].trim(), colorName: rest, image });
   });
   return { rows, skipped };
 }
@@ -3553,11 +3666,37 @@ function renderMultiSelect(container, options, selectedValues, onChange, placeho
   drawList();
 }
 
-function readImages(files, callback) {
-  Array.from(files).forEach((file) => {
+function compressImageFile(file) {
+  return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => callback(String(reader.result || ""));
+    reader.onload = () => {
+      const original = String(reader.result || "");
+      const image = new Image();
+      image.onload = () => {
+        const scale = Math.min(1, IMAGE_MAX_SIZE / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+          resolve(original);
+          return;
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", IMAGE_QUALITY));
+      };
+      image.onerror = () => resolve(original);
+      image.src = original;
+    };
+    reader.onerror = () => resolve("");
     reader.readAsDataURL(file);
+  });
+}
+
+function readImages(files, callback) {
+  Array.from(files || []).forEach(async (file) => {
+    const src = await compressImageFile(file);
+    if (src) callback(src);
   });
 }
 
@@ -4441,15 +4580,30 @@ els.newStitchLetter.addEventListener("keydown", (event) => {
   els.addStitchBtn.click();
 });
 els.addBrandBtn.addEventListener("click", () => {
-  const brand = els.newBrandName.value.trim();
+  const brand = fullBrandCategoryName(els.newBrandName.value.trim(), els.newBrandCategory.value.trim());
   if (!brand) return;
   if (warnDuplicateName(brand, state.brands, "線材品牌")) return;
   keepScroll(() => {
     state.brands.push(brand);
     state.brandWeights[brand] = 0;
     els.newBrandName.value = "";
+    els.newBrandCategory.value = "";
     render();
   });
+});
+els.importBrandBtn.addEventListener("click", () => els.importBrandInput.click());
+els.importBrandInput.addEventListener("change", async () => {
+  const file = els.importBrandInput.files?.[0];
+  if (!file) return;
+  try {
+    const brand = importBrandCardPackage(JSON.parse(await file.text()));
+    render();
+    if (brand) alert(`已匯入「${brand}」。`);
+  } catch (error) {
+    alert(error.message || "匯入失敗，請確認檔案是否正確。");
+  } finally {
+    els.importBrandInput.value = "";
+  }
 });
 els.brandList.addEventListener("click", (event) => {
   if (event.target.closest("input, .drag-handle")) return;
@@ -4703,6 +4857,7 @@ els.closeBrandCardModal.addEventListener("click", () => {
   els.brandCardModal.classList.add("hidden");
   render();
 });
+els.exportBrandCardBtn.addEventListener("click", () => downloadBrandCard(selectedBrandName));
 els.brandCardCategory.addEventListener("change", renameBrandFromCardSettings);
 els.brandCardWeight.addEventListener("input", () => {
   if (!selectedBrandName) return;
@@ -4712,17 +4867,32 @@ els.brandCardWeight.addEventListener("input", () => {
 els.brandCardImageInput.addEventListener("change", () => readImages(els.brandCardImageInput.files, (src) => {
   els.brandCardImageInput.dataset.image = src;
 }));
+els.applyBrandCardFolderBtn.addEventListener("click", () => {
+  const card = brandCard();
+  const folderUrl = els.brandCardFolderUrl.value.trim();
+  if (!card || !folderUrl) return;
+  const changed = card.colors.reduce((count, color) => {
+    const image = imageUrlFromFolder(folderUrl, color.lot);
+    if (!image) return count;
+    color.image = image;
+    return count + 1;
+  }, 0);
+  renderBrandCardEditor();
+  saveState();
+  alert(`已套用 ${changed} 個色號的圖片網址。`);
+});
 els.addBrandCardColorBtn.addEventListener("click", () => {
   const card = brandCard();
   const colorName = els.brandCardColorName.value.trim();
   const lot = els.brandCardLot.value.trim();
-  const image = els.brandCardImageInput.dataset.image || "";
+  const image = els.brandCardImageInput.dataset.image || absoluteAssetUrl(els.brandCardImageUrl.value);
   if (!card || (!colorName && !lot && !image)) return;
   if (colorName && warnDuplicateName(colorName, card.colors, "色卡顏色", (color) => color.colorName)) return;
   if (lot && warnDuplicateName(lot, card.colors, "色號", (color) => color.lot)) return;
   card.colors.push({ id: crypto.randomUUID(), colorName, lot, image });
   els.brandCardColorName.value = "";
   els.brandCardLot.value = "";
+  els.brandCardImageUrl.value = "";
   els.brandCardImageInput.value = "";
   els.brandCardImageInput.dataset.image = "";
   renderBrandCardEditor();
@@ -4784,6 +4954,10 @@ els.brandCardColorList.addEventListener("input", (event) => {
   const color = card.colors.find((item) => item.id === colorId);
   if (!color) return;
   color[key] = event.target.value;
+  if (key === "image") {
+    color[key] = absoluteAssetUrl(event.target.value);
+    event.target.value = color[key];
+  }
   saveState();
 });
 els.brandCardColorList.addEventListener("change", (event) => {

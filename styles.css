@@ -689,7 +689,7 @@ textarea {
   align-items: center;
 }
 .brand-add-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .7fr) auto auto;
 }
 .supply-color-row {
   grid-template-columns: 1fr 96px auto;
@@ -772,14 +772,24 @@ textarea {
   text-align: left;
 }
 .common-group-display span:nth-child(2) {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
 }
 .common-group-display strong,
 .common-group-display small {
-  display: block;
+  display: inline;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.common-group-display strong {
+  flex: 0 1 auto;
+}
+.common-group-display small {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .picker-group-row {
   grid-template-columns: minmax(0, 1fr);
@@ -1009,11 +1019,15 @@ textarea {
 }
 .brand-card-entry-row {
   display: grid;
-  grid-template-columns: 58px minmax(44px, .5fr) minmax(74px, .67fr) auto;
+  grid-template-columns: 58px minmax(56px, .5fr) minmax(84px, .65fr) minmax(140px, 1fr) auto;
   gap: 10px;
   align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
   overflow-x: auto;
-  padding-bottom: 2px;
+  margin-top: 14px;
+  padding: 10px;
 }
 .compact-photo-tile {
   width: 58px;
@@ -1030,7 +1044,7 @@ textarea {
 }
 .brand-card-color-row {
   display: grid;
-  grid-template-columns: 58px minmax(44px, .5fr) minmax(74px, .67fr) auto;
+  grid-template-columns: 58px minmax(56px, .5fr) minmax(84px, .65fr) minmax(140px, 1fr) auto;
   gap: 10px;
   align-items: center;
   border: 1px solid var(--line);
@@ -1240,7 +1254,8 @@ textarea {
     min-width: 280px;
   }
   .stitch-edit-card .delete-stitch-button { grid-column: auto; }
-  .brand-add-row { grid-template-columns: 1fr; }
+  .brand-add-row { grid-template-columns: minmax(0, 1fr) minmax(0, .75fr); }
+  .brand-add-row .compact { min-width: 0; }
   .supply-color-row,
   .supply-color-header { grid-template-columns: minmax(0, 1fr) 78px 48px; }
   .supply-color-row {
@@ -1264,12 +1279,17 @@ textarea {
     overflow-x: auto;
   }
   .brand-card-color-row {
-    min-width: 260px;
+    min-width: 420px;
   }
   .brand-card-entry-row {
-    grid-template-columns: 58px 56px 84px 64px;
+    grid-template-columns: 58px 56px 84px 140px 64px;
   }
   .tool-row { align-items: flex-start; flex-direction: column; padding: 12px; }
+  .tool-row.common-group-display {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+  }
   .settings-tool-row {
     grid-template-columns: 28px minmax(0, 1fr);
     align-items: center;
