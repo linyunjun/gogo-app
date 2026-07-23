@@ -2986,7 +2986,8 @@ function renderYarnForm() {
   const supplyButton = els.addSupplyColorBtn;
   if (supplyTitle) supplyTitle.textContent = "分類";
   if (supplyButton) supplyButton.textContent = "+ 新增分類";
-  if (isSupply) {
+  const hasSupplyColors = isSupply && (yarn.supplyColors || []).length > 0;
+  if (hasSupplyColors) {
     yarn.amount = (yarn.supplyColors || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   }
   [els.yarnLot, els.yarnWeight, els.yarnBrand].forEach((field) => field.closest("label")?.classList.toggle("hidden", isSupply));
@@ -2998,14 +2999,14 @@ function renderYarnForm() {
   els.yarnBrand.value = state.brands.includes(yarn.brand) ? yarn.brand : "其他";
   els.yarnLot.value = yarn.lot;
   els.yarnAmount.value = yarn.amount;
-  els.yarnAmount.readOnly = isSupply;
-  els.yarnAmount.closest("label")?.classList.toggle("readonly-field", isSupply);
+  els.yarnAmount.readOnly = hasSupplyColors;
+  els.yarnAmount.closest("label")?.classList.toggle("readonly-field", hasSupplyColors);
   els.yarnUnit.value = yarn.unit || "個";
   els.yarnWeight.value = yarn.weight;
   els.yarnUrl.value = yarn.url;
   els.yarnNotes.value = yarn.notes;
   els.supplyColorList.innerHTML = `
-    <div class="supply-color-header"><span>項目</span><span>數量</span><span></span></div>
+    <div class="supply-color-header"><span>類別</span><span>數量</span><span></span></div>
     ${(yarn.supplyColors || []).map((item, index) => `
     <article class="supply-color-row">
       <input value="${escapeHtml(item.name || "")}" placeholder="分類" data-supply-color-field="${index}:name">
@@ -4290,6 +4291,7 @@ els.addSupplyColorBtn.addEventListener("click", () => {
   if (!yarn) return;
   yarn.supplyColors = yarn.supplyColors || [];
   yarn.supplyColors.push({ name: "", amount: 0 });
+  yarn.amount = (yarn.supplyColors || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   render();
 });
 els.supplyColorList.addEventListener("input", (event) => {
@@ -4311,7 +4313,7 @@ els.supplyColorList.addEventListener("click", (event) => {
   const yarn = state.yarns.find((item) => item.id === selectedYarnId);
   if (index === undefined || !yarn) return;
   yarn.supplyColors.splice(Number(index), 1);
-  if ((yarn.stockType || "yarn") === "supply") {
+  if ((yarn.stockType || "yarn") === "supply" && (yarn.supplyColors || []).length) {
     yarn.amount = (yarn.supplyColors || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   }
   render();
@@ -4888,6 +4890,18 @@ async function forceAppUpdate() {
     alert("更新失敗，請確認網路後再試一次。你的資料沒有被刪除。");
   }
 }
+
+document.querySelectorAll(".modal").forEach((modal) => {
+  modal.addEventListener("click", (event) => {
+    if (event.target !== modal) return;
+    const closeButton = modal.querySelector(".header-icon[id^='close']");
+    if (closeButton) {
+      closeButton.click();
+      return;
+    }
+    modal.classList.add("hidden");
+  });
+});
 
 registerServiceWorker();
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
