@@ -233,10 +233,10 @@
               備註
               <textarea id="partNotes" rows="2"></textarea>
             </label>
-            <div class="segment-toolbar">
+            <div class="segment-list" id="partSegmentList"></div>
+            <div class="segment-toolbar bottom-segment-toolbar">
               <button class="primary-button" id="addSegmentBtn">+ 新增段落</button>
             </div>
-            <div class="segment-list" id="partSegmentList"></div>
           </div>
         </section>
 
@@ -356,6 +356,12 @@
           </details>
 
           <details class="settings-card settings-details">
+            <summary>圖片雲端</summary>
+            <p class="muted">新增圖片會自動上傳到共用圖片雲端，APP 只保存圖片網址。</p>
+            <p class="muted" id="cloudinaryStatus">尚未設定圖片雲端。</p>
+          </details>
+
+          <details class="settings-card settings-details">
             <summary>針法</summary>
             <div class="stitch-add-grid">
               <input id="newStitchZh" placeholder="中文名稱" />
@@ -444,6 +450,19 @@
           <div class="button-row modal-actions">
             <button class="outline-button" id="copyPartBtn">複製部分</button>
             <button class="danger-button" id="deletePartBtn">刪除部分</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="segmentActionModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2 id="segmentActionTitle">段落選項</h2>
+            <button class="header-icon" id="closeSegmentActionModal">×</button>
+          </div>
+          <div class="button-row modal-actions">
+            <button class="outline-button" id="copySegmentBtn">複製段落</button>
+            <button class="danger-button" id="deleteSegmentBtn">刪除段落</button>
           </div>
         </div>
       </div>

@@ -8,6 +8,11 @@ const DEFAULT_BRAND_IMAGE_FOLDERS = {
   "萌娃娃 4股": "images/yarn/mengwawa-4",
   "蘇禾 4股": "images/yarn/suho-4"
 };
+const CLOUDINARY_CONFIG = {
+  cloudName: "rg53i73a",
+  uploadPreset: "gogo_app_upload",
+  folder: "gogo_app"
+};
 const IMAGE_MAX_SIZE = 900;
 const IMAGE_QUALITY = 0.72;
 let storageWarningShown = false;
@@ -1022,6 +1027,8 @@ let selectedPartId = state.patterns[0]?.parts?.[0]?.id ?? null;
 let selectedToolId = state.tools[0]?.id ?? null;
 let selectedBrandName = "";
 let actionPartId = null;
+let actionSegmentId = null;
+let editingSegmentId = null;
 let actionPatternId = null;
 let actionProjectId = null;
 let actionYarnId = null;
@@ -1029,6 +1036,7 @@ let actionFolderName = "";
 let selectedProjectIds = new Set();
 let selectedPatternIds = new Set();
 let selectedYarnIds = new Set();
+let suppressNextSelectionClickUntil = 0;
 let editingCommonGroupId = null;
 let activeProjectFolder = null;
 let targetSegmentForGroupId = null;
@@ -1105,6 +1113,7 @@ const els = {
   addPartBtn: document.querySelector("#addPartBtn"),
   addSegmentBtn: document.querySelector("#addSegmentBtn"),
   segmentList: document.querySelector("#segmentList"),
+  cloudinaryStatus: document.querySelector("#cloudinaryStatus"),
   partEditTitle: document.querySelector("#partEditTitle"),
   partEditMeta: document.querySelector("#partEditMeta"),
   deletePartBtn: document.querySelector("#deletePartBtn"),
@@ -1246,6 +1255,11 @@ const els = {
   partActionModal: document.querySelector("#partActionModal"),
   closePartActionModal: document.querySelector("#closePartActionModal"),
   partActionTitle: document.querySelector("#partActionTitle"),
+  segmentActionModal: document.querySelector("#segmentActionModal"),
+  closeSegmentActionModal: document.querySelector("#closeSegmentActionModal"),
+  segmentActionTitle: document.querySelector("#segmentActionTitle"),
+  copySegmentBtn: document.querySelector("#copySegmentBtn"),
+  deleteSegmentBtn: document.querySelector("#deleteSegmentBtn"),
   stockCreateModal: document.querySelector("#stockCreateModal"),
   closeStockCreateModal: document.querySelector("#closeStockCreateModal"),
   createSingleStockBtn: document.querySelector("#createSingleStockBtn"),
@@ -1944,6 +1958,8 @@ function sortedProjects() {
   return state.projects.slice().sort((a, b) => {
     if (mode === "pinned-desc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "pinned-asc") return Number(a.pinned) - Number(b.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
+    const pinOrder = Number(b.pinned) - Number(a.pinned);
+    if (pinOrder) return pinOrder;
     if (mode === "progress-desc") return projectProgress(b).percent - projectProgress(a).percent || compareText(a.name, b.name);
     if (mode === "progress-asc") return projectProgress(a).percent - projectProgress(b).percent || compareText(a.name, b.name);
     if (mode === "type-asc") return compareText(a.type, b.type) || compareText(a.name, b.name);
@@ -1962,6 +1978,8 @@ function sortedTemplatePatterns() {
   return templatePatterns().slice().sort((a, b) => {
     if (mode === "pinned-desc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "pinned-asc") return Number(a.pinned) - Number(b.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
+    const pinOrder = Number(b.pinned) - Number(a.pinned);
+    if (pinOrder) return pinOrder;
     if (mode === "updated-desc") return compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "updated-asc") return compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
     if (mode === "name-desc") return compareText(a.name, b.name, "desc");
@@ -1969,6 +1987,16 @@ function sortedTemplatePatterns() {
     if (mode === "rounds-asc") return expandedRows(a).length - expandedRows(b).length || compareText(a.name, b.name);
     return compareText(a.name, b.name);
   });
+}
+
+function supplyPreviewText(yarn) {
+  const unit = yarn.unit || "個";
+  const colors = Array.isArray(yarn.supplyColors) ? yarn.supplyColors : [];
+  if (!colors.length) return "";
+  return colors
+    .filter((item) => item.name || Number(item.amount || 0))
+    .map((item) => `${item.name || "未命名"}${Number(item.amount || 0)}${unit}`)
+    .join("、");
 }
 
 function templatePatterns() {
@@ -2530,6 +2558,7 @@ function renderProjectCard(project) {
     longPressed = false;
     timer = window.setTimeout(() => {
       longPressed = true;
+      suppressNextSelectionClickUntil = Date.now() + 700;
       selectedProjectIds.add(project.id);
       actionProjectId = project.id;
       updateProjectActionSheet();
@@ -2540,7 +2569,7 @@ function renderProjectCard(project) {
   card.addEventListener("pointerup", () => window.clearTimeout(timer));
   card.addEventListener("pointerleave", () => window.clearTimeout(timer));
   card.addEventListener("click", () => {
-    if (longPressed) return;
+    if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
     if (selectedProjectIds.size) {
       if (selectedProjectIds.has(project.id)) {
         selectedProjectIds.delete(project.id);
@@ -2708,6 +2737,12 @@ function renderTracking() {
       summary.className = "pattern-summary-chip";
       summary.textContent = summarizeItems(patternRow.items);
       line.append(summary);
+      if (patternRow.note) {
+        const note = document.createElement("span");
+        note.className = "pattern-note-chip";
+        note.textContent = patternRow.note;
+        line.append(note);
+      }
       const breakLine = document.createElement("span");
       breakLine.className = "pattern-line-break";
       line.append(breakLine);
@@ -2748,18 +2783,19 @@ function renderPatterns() {
     card.addEventListener("pointerdown", () => {
       longPressed = false;
       timer = window.setTimeout(() => {
-        longPressed = true;
-        selectedPatternIds.add(pattern.id);
-        actionPatternId = pattern.id;
+      longPressed = true;
+      suppressNextSelectionClickUntil = Date.now() + 700;
+      selectedPatternIds.add(pattern.id);
+      actionPatternId = pattern.id;
         updatePatternActionSheet();
         els.patternActionModal.classList.remove("hidden");
         renderPatterns();
       }, 550);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
-    card.addEventListener("pointerleave", () => window.clearTimeout(timer));
-    card.addEventListener("click", () => {
-      if (longPressed) return;
+  card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+  card.addEventListener("click", () => {
+      if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
       if (selectedPatternIds.size) {
         if (selectedPatternIds.has(pattern.id)) {
           selectedPatternIds.delete(pattern.id);
@@ -2868,40 +2904,78 @@ function renderPartEditor() {
   els.partEditMeta.textContent = `共 ${part.segments.length} 段`;
   els.partName.value = part.name;
   els.partNotes.value = part.notes || "";
+  if (!part.segments.some((segment) => segment.id === editingSegmentId)) {
+    editingSegmentId = null;
+  }
   els.partSegmentList.innerHTML = "";
 
   compactSegments(part.segments).forEach((group) => {
     const segment = group.segment;
+    const isEditing = editingSegmentId === segment.id;
     const card = document.createElement("article");
-    card.className = "segment-card";
-    card.draggable = true;
+    card.className = `segment-card ${isEditing ? "editing-segment-card" : ""}`;
     card.dataset.segmentId = segment.id;
-    card.innerHTML = `
-      <div class="segment-head">
-        <span>
-          <strong class="round-label">${escapeHtml(segmentRoundLabel(group.start, group.end))}</strong>
-          <span class="segment-total">${segmentStitchCount(segment)} 針</span>
-        </span>
-        <span class="segment-actions">
-          <button class="text-button" data-copy-segment="${segment.id}">複製</button>
-          <button class="text-button" data-remove-segment="${segment.id}">刪除</button>
-        </span>
+    const summaryText = segment.note || summarizeItems(segment.items || []) || "尚無針法";
+    card.innerHTML = isEditing ? `
+      <div class="segment-edit-layout">
+        <span class="drag-handle segment-drag-handle" draggable="true" data-segment-drag="${segment.id}">☰</span>
+        <div class="segment-edit-content">
+          <div class="segment-head">
+            <span>
+              <strong class="round-label">${escapeHtml(segmentRoundLabel(group.start, group.end))}</strong>
+              <span class="segment-total">${segmentStitchCount(segment)} 針</span>
+            </span>
+            <span class="segment-actions">
+              <button class="text-button" data-finish-segment-edit>完成</button>
+            </span>
+          </div>
+          <label>段落備註<input value="${escapeHtml(segment.note || "")}" data-segment-field="${segment.id}:note"></label>
+          <div class="item-list">${segment.items.map((item, index) => itemEditor(segment, item, index)).join("")}</div>
+          <div class="segment-toolbar segment-inner-toolbar">
+            <button class="outline-button" data-add-group-to-segment="${segment.id}">+ 新增群組</button>
+            <button class="primary-button" data-add-item="${segment.id}">+ 新增針法</button>
+          </div>
+        </div>
       </div>
-      <label>段落備註<input value="${escapeHtml(segment.note || "")}" data-segment-field="${segment.id}:note"></label>
-      <div class="item-list">${segment.items.map((item, index) => itemEditor(segment, item, index)).join("")}</div>
-      <div class="segment-toolbar segment-inner-toolbar">
-        <button class="outline-button" data-add-group-to-segment="${segment.id}">+ 新增群組</button>
-        <button class="primary-button" data-add-item="${segment.id}">+ 新增針法</button>
+    ` : `
+      <div class="segment-summary-layout">
+        <span class="drag-handle segment-drag-handle" draggable="true" data-segment-drag="${segment.id}">☰</span>
+        <span class="segment-summary-content">
+          <span class="segment-head">
+            <span>
+              <strong class="round-label">${escapeHtml(segmentRoundLabel(group.start, group.end))}</strong>
+              <span class="segment-total">${segmentStitchCount(segment)} 針</span>
+            </span>
+            <span class="drag-hint">長按複製/刪除</span>
+          </span>
+          <span class="segment-summary">${escapeHtml(summaryText)}</span>
+        </span>
       </div>
     `;
     let longPressTimer = null;
+    let didLongPress = false;
     card.addEventListener("pointerdown", (event) => {
-      if (event.target.closest("input, select, button")) return;
-      longPressTimer = window.setTimeout(() => copySegmentWithPrompt(segment.id), 550);
+      if (isEditing) return;
+      if (event.target.closest("input, select, button, [data-segment-drag]")) return;
+      didLongPress = false;
+      longPressTimer = window.setTimeout(() => {
+        didLongPress = true;
+        actionSegmentId = segment.id;
+        els.segmentActionTitle.textContent = segmentRoundLabel(group.start, group.end);
+        els.segmentActionModal.classList.remove("hidden");
+      }, 550);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(longPressTimer));
     card.addEventListener("pointerleave", () => window.clearTimeout(longPressTimer));
-    card.addEventListener("dragstart", (event) => event.dataTransfer.setData("text/plain", segment.id));
+    card.addEventListener("click", (event) => {
+      if (isEditing || didLongPress) return;
+      if (event.target.closest("input, select, button, [data-segment-drag]")) return;
+      editingSegmentId = segment.id;
+      renderPartEditor();
+    });
+    card.querySelector("[data-segment-drag]")?.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", segment.id);
+    });
     card.addEventListener("dragover", (event) => event.preventDefault());
     card.addEventListener("drop", (event) => {
       event.preventDefault();
@@ -2968,7 +3042,7 @@ function renderStash() {
     card.className = `yarn-card ${yarn.pinned ? "pinned-card" : ""} ${selectedYarnIds.has(yarn.id) ? "selected-card" : ""}`;
     const usageText = `<span>使用 ${stockUsageCount(yarn.id)} 次</span>`;
     const meta = (yarn.stockType || "yarn") === "supply"
-      ? `<span>總數 ${Number(yarn.amount || 0)} ${escapeHtml(yarn.unit || "個")}</span>${(yarn.supplyColors || []).length ? `<span>${yarn.supplyColors.length} 分類</span>` : ""}${usageText}`
+      ? `<span>總數 ${Number(yarn.amount || 0)} ${escapeHtml(yarn.unit || "個")}</span>${supplyPreviewText(yarn) ? `<span>${escapeHtml(supplyPreviewText(yarn))}</span>` : ""}${usageText}`
       : `<span>${escapeHtml(yarn.brand)}</span><span>${escapeHtml(yarn.lot || "無色號")}</span><span>${Number(yarn.amount || 0)} ${escapeHtml(yarn.unit || "顆")}</span><span>${Number(yarn.weight || 0)} g</span>${usageText}`;
     card.innerHTML = `
       ${yarn.image ? `<img src="${yarn.image}" alt="">` : ""}
@@ -2982,18 +3056,19 @@ function renderStash() {
     card.addEventListener("pointerdown", () => {
       longPressed = false;
       timer = window.setTimeout(() => {
-        longPressed = true;
-        selectedYarnIds.add(yarn.id);
-        actionYarnId = yarn.id;
+      longPressed = true;
+      suppressNextSelectionClickUntil = Date.now() + 700;
+      selectedYarnIds.add(yarn.id);
+      actionYarnId = yarn.id;
         updateStashActionSheet();
         els.stashActionModal.classList.remove("hidden");
         renderStash();
       }, 550);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
-    card.addEventListener("pointerleave", () => window.clearTimeout(timer));
-    card.addEventListener("click", () => {
-      if (longPressed) return;
+  card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+  card.addEventListener("click", () => {
+      if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
       if (selectedYarnIds.size) {
         if (selectedYarnIds.has(yarn.id)) {
           selectedYarnIds.delete(yarn.id);
@@ -3062,18 +3137,20 @@ function renderYarnForm() {
 function renderSettings() {
   const settingsView = document.querySelector("#settingsView");
   const displaySection = els.displayMode.closest(".settings-card");
+  const cloudinarySection = els.cloudinaryStatus?.closest(".settings-card");
   const toolSection = els.toolList.closest(".settings-card");
   const brandSection = els.brandList.closest(".settings-card");
   const projectTypeSection = els.projectTypeList.closest(".settings-card");
   const commonGroupSection = els.commonGroupList.closest(".settings-card");
   const stitchSection = els.stitchEditorList.closest(".settings-card");
   const resetSection = els.resetDataBtn.closest(".settings-card");
-  [displaySection, toolSection, brandSection, projectTypeSection, commonGroupSection, stitchSection, resetSection].forEach((section) => settingsView.append(section));
+  [displaySection, cloudinarySection, toolSection, brandSection, projectTypeSection, commonGroupSection, stitchSection, resetSection].filter(Boolean).forEach((section) => settingsView.append(section));
 
   if (state.settings.displayMode === "abbr") state.settings.displayMode = "letter";
   els.displayMode.value = state.settings.displayMode;
   els.roundLabelMode.value = state.settings.roundLabelMode;
   if (els.themeColor) els.themeColor.value = state.settings.themeColor || "rose";
+  updateCloudinaryStatus();
   const displayLabel = displaySection.querySelector("label");
   const displaySelect = displayLabel.querySelector("select");
   displayLabel.innerHTML = "針法顯示";
@@ -3681,10 +3758,57 @@ function compressImageFile(file) {
   });
 }
 
+function cloudinaryConfig() {
+  return CLOUDINARY_CONFIG;
+}
+
+function cloudinaryEnabled() {
+  return Boolean(CLOUDINARY_CONFIG.cloudName && CLOUDINARY_CONFIG.uploadPreset);
+}
+
+function updateCloudinaryStatus(text = "") {
+  if (!els.cloudinaryStatus) return;
+  const config = cloudinaryConfig();
+  els.cloudinaryStatus.textContent = text || (cloudinaryEnabled()
+    ? `已啟用共用圖片雲端：${config.folder}`
+    : "圖片雲端尚未啟用。");
+}
+
+async function uploadImageToCloudinary(dataUrl) {
+  const config = cloudinaryConfig();
+  if (!config.cloudName || !config.uploadPreset) throw new Error("尚未設定圖片雲端");
+  const body = new FormData();
+  body.append("file", dataUrl);
+  body.append("upload_preset", config.uploadPreset);
+  if (config.folder) body.append("folder", config.folder);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/image/upload`, {
+    method: "POST",
+    body
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.secure_url) {
+    throw new Error(result.error?.message || "圖片上傳失敗");
+  }
+  return result.secure_url;
+}
+
 function readImages(files, callback) {
   Array.from(files || []).forEach(async (file) => {
     const src = await compressImageFile(file);
-    if (src) callback(src);
+    if (!src) return;
+    if (!cloudinaryEnabled()) {
+      callback(src);
+      return;
+    }
+    try {
+      updateCloudinaryStatus("圖片上傳中...");
+      const url = await uploadImageToCloudinary(src);
+      callback(url);
+      updateCloudinaryStatus("圖片已上傳到雲端。");
+    } catch (error) {
+      updateCloudinaryStatus();
+      alert(`圖片沒有上傳成功：${error.message || "請檢查圖片雲端設定"}`);
+    }
   });
 }
 
@@ -4151,7 +4275,9 @@ els.patternImageInput.addEventListener("change", () => readImages(els.patternIma
 els.addSegmentBtn.addEventListener("click", () => {
   const pattern = editablePattern();
   const part = pattern.parts.find((item) => item.id === selectedPartId) || pattern.parts[0];
-  part.segments.push({ id: crypto.randomUUID(), repeat: 1, note: "", items: [] });
+  const segment = { id: crypto.randomUUID(), repeat: 1, note: "", items: [] };
+  part.segments.push(segment);
+  editingSegmentId = segment.id;
   render();
 });
 els.addPartBtn.addEventListener("click", () => {
@@ -4198,6 +4324,23 @@ els.deletePartBtn.addEventListener("click", () => {
   render();
 });
 els.closePartActionModal.addEventListener("click", () => els.partActionModal.classList.add("hidden"));
+els.copySegmentBtn.addEventListener("click", () => {
+  if (!actionSegmentId) return;
+  els.segmentActionModal.classList.add("hidden");
+  copySegmentWithPrompt(actionSegmentId);
+});
+els.deleteSegmentBtn.addEventListener("click", () => {
+  const pattern = editablePattern();
+  if (!actionSegmentId) return;
+  pattern.parts.forEach((part) => {
+    part.segments = part.segments.filter((segment) => segment.id !== actionSegmentId);
+  });
+  if (editingSegmentId === actionSegmentId) editingSegmentId = null;
+  actionSegmentId = null;
+  els.segmentActionModal.classList.add("hidden");
+  render();
+});
+els.closeSegmentActionModal.addEventListener("click", () => els.segmentActionModal.classList.add("hidden"));
 els.partSegmentList.addEventListener("input", (event) => {
   const segmentField = event.target.dataset.segmentField;
   const itemField = event.target.dataset.itemField;
@@ -4229,10 +4372,16 @@ els.partSegmentList.addEventListener("click", (event) => {
   const removeItem = event.target.closest("[data-remove-item]")?.dataset.removeItem;
   const addGroupStitch = event.target.closest("[data-add-group-stitch]")?.dataset.addGroupStitch;
   const removeGroupStitch = event.target.closest("[data-remove-group-stitch]")?.dataset.removeGroupStitch;
+  if (event.target.closest("[data-finish-segment-edit]")) {
+    editingSegmentId = null;
+    render();
+    return;
+  }
   if (removeSegment) {
     pattern.parts.forEach((part) => {
       part.segments = part.segments.filter((segment) => segment.id !== removeSegment);
     });
+    if (editingSegmentId === removeSegment) editingSegmentId = null;
     render();
     return;
   }
