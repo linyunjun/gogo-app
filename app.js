@@ -1113,6 +1113,9 @@ const els = {
   addPartBtn: document.querySelector("#addPartBtn"),
   addSegmentBtn: document.querySelector("#addSegmentBtn"),
   segmentList: document.querySelector("#segmentList"),
+  imagePreviewModal: document.querySelector("#imagePreviewModal"),
+  closeImagePreviewModal: document.querySelector("#closeImagePreviewModal"),
+  imagePreview: document.querySelector("#imagePreview"),
   cloudinaryStatus: document.querySelector("#cloudinaryStatus"),
   partEditTitle: document.querySelector("#partEditTitle"),
   partEditMeta: document.querySelector("#partEditMeta"),
@@ -2651,7 +2654,7 @@ function renderDetail() {
   els.detailType.classList.add("hidden");
   els.projectPhotoPicker.classList.toggle("has-photo", Boolean(project.image));
   els.projectPhoto.src = project.image || "";
-  els.projectImages.innerHTML = (project.images || []).map((src, index) => `<button class="image-thumb ${src === project.image ? "cover-thumb" : ""}" data-project-image="${index}" type="button"><img src="${src}" alt="作品圖片 ${index + 1}"><span>×</span></button>`).join("");
+  els.projectImages.innerHTML = (project.images || []).map((src, index) => `<button class="image-thumb ${src === project.image ? "cover-thumb" : ""}" data-project-image="${index}" type="button"><img src="${src}" alt="作品圖片 ${index + 1}"><span data-delete-image>×</span></button>`).join("");
 
   els.projectName.value = project.name;
   els.projectType.value = project.type;
@@ -2838,7 +2841,7 @@ function renderPatternEditor() {
   }, "搜尋消耗品");
   renderMultiSelect(els.patternTools, state.tools.map((tool) => ({ value: tool.id, label: tool.brand ? `${tool.brand} · ${tool.name}` : tool.name })), pattern.toolIds || [], (values) => { pattern.toolIds = values; pattern.updatedAt = new Date().toISOString(); saveState(); }, "搜尋工具");
   renderPatternSupplyUsage(pattern);
-  els.patternImages.innerHTML = pattern.images.map((src, index) => `<button class="image-thumb ${index === 0 ? "cover-thumb" : ""}" data-remove-image="${index}"><img src="${src}" alt="織圖圖片 ${index + 1}"><span>×</span></button>`).join("");
+  els.patternImages.innerHTML = pattern.images.map((src, index) => `<button class="image-thumb ${index === 0 ? "cover-thumb" : ""}" data-remove-image="${index}"><img src="${src}" alt="織圖圖片 ${index + 1}"><span data-delete-image>×</span></button>`).join("");
   els.segmentList.innerHTML = "";
   pattern.parts.forEach((part) => {
     const section = document.createElement("button");
@@ -3110,7 +3113,7 @@ function renderYarnForm() {
   [els.yarnLot, els.yarnWeight, els.yarnBrand].forEach((field) => field.closest("label")?.classList.toggle("hidden", isSupply));
   els.yarnUnit.closest("label")?.classList.toggle("hidden", !isSupply);
   els.supplyColorsSection.classList.toggle("hidden", !isSupply);
-  els.yarnImagePreview.innerHTML = (yarn.images || []).map((src, index) => `<button class="image-thumb ${src === yarn.image ? "cover-thumb" : ""}" data-yarn-image="${index}" type="button"><img src="${src}" alt="庫存圖片 ${index + 1}"><span>×</span></button>`).join("");
+  els.yarnImagePreview.innerHTML = (yarn.images || []).map((src, index) => `<button class="image-thumb ${src === yarn.image ? "cover-thumb" : ""}" data-yarn-image="${index}" type="button"><img src="${src}" alt="庫存圖片 ${index + 1}"><span data-delete-image>×</span></button>`).join("");
   els.yarnStockType.value = yarn.stockType || "yarn";
   els.yarnColorName.value = yarn.colorName;
   els.yarnBrand.value = state.brands.includes(yarn.brand) ? yarn.brand : "其他";
@@ -3812,6 +3815,58 @@ function readImages(files, callback) {
   });
 }
 
+function addProjectImage(src) {
+  const project = currentProject();
+  if (!project) return;
+  project.images = project.images || [];
+  project.images.push(src);
+  updateProject({ image: project.image || src, images: project.images });
+}
+
+function addPatternImage(src) {
+  const pattern = editablePattern();
+  if (!pattern) return;
+  pattern.images = pattern.images || [];
+  pattern.images.push(src);
+  pattern.updatedAt = new Date().toISOString();
+  render();
+}
+
+function addYarnImage(src) {
+  const yarn = state.yarns.find((item) => item.id === selectedYarnId);
+  if (!yarn) return;
+  yarn.images = yarn.images || [];
+  yarn.images.push(src);
+  yarn.image = yarn.image || src;
+  render();
+}
+
+function addBrandCardPendingImage(src) {
+  if (!els.brandCardImageInput) return;
+  els.brandCardImageInput.dataset.image = src;
+  if (els.brandCardImageUrl) els.brandCardImageUrl.value = src;
+}
+
+function addPastedImage(src) {
+  if (activeView === "detail") {
+    addProjectImage(src);
+    return true;
+  }
+  if (activeView === "patternEdit") {
+    addPatternImage(src);
+    return true;
+  }
+  if (activeView === "yarnEdit") {
+    addYarnImage(src);
+    return true;
+  }
+  if (!els.brandCardModal?.classList.contains("hidden")) {
+    addBrandCardPendingImage(src);
+    return true;
+  }
+  return false;
+}
+
 function attachCoverImageHandlers(container, selector, getItem) {
   if (!container) return;
   let timer = null;
@@ -3827,11 +3882,26 @@ function attachCoverImageHandlers(container, selector, getItem) {
       item.image = picked;
       container.dataset.justCovered = "true";
       render();
+      window.setTimeout(() => {
+        if (container.dataset.justCovered === "true") container.dataset.justCovered = "";
+      }, 700);
     }, 550);
   });
   ["pointerup", "pointerleave", "pointercancel"].forEach((eventName) => {
     container.addEventListener(eventName, () => window.clearTimeout(timer));
   });
+}
+
+function openImagePreview(src) {
+  if (!src || !els.imagePreviewModal || !els.imagePreview) return;
+  els.imagePreview.src = src;
+  els.imagePreviewModal.classList.remove("hidden");
+}
+
+function closeImagePreview() {
+  if (!els.imagePreviewModal || !els.imagePreview) return;
+  els.imagePreviewModal.classList.add("hidden");
+  els.imagePreview.src = "";
 }
 
 function showFinishToast(patternName) {
@@ -3864,6 +3934,16 @@ function openPatternPicker(onSelect) {
 
 els.navTabs.forEach((tab) => tab.addEventListener("click", () => switchView(tab.dataset.view)));
 els.backBtn.addEventListener("click", () => switchView(activeView === "track" ? "detail" : activeView === "partEdit" ? "patternEdit" : activeView === "patternEdit" ? "patterns" : activeView === "yarnEdit" ? "stash" : "projects"));
+document.addEventListener("paste", (event) => {
+  const files = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith("image/"));
+  if (!files.length) return;
+  event.preventDefault();
+  let accepted = false;
+  readImages(files, (src) => {
+    accepted = addPastedImage(src) || accepted;
+    if (!accepted) alert("請先進入作品、織圖或庫存的編輯頁，再貼上圖片。");
+  });
+});
 els.projectSort.addEventListener("change", () => { state.settings.projectSort = els.projectSort.value; render(); });
 els.patternSort.addEventListener("change", () => { state.settings.patternSort = els.patternSort.value; render(); });
 
@@ -3894,13 +3974,12 @@ els.newProjectBtn.addEventListener("click", () => {
   });
 });
 
-els.projectPhotoInput.addEventListener("change", () => readImages(els.projectPhotoInput.files, (src) => {
-  const project = currentProject();
-  project.images = project.images || [];
-  project.images.push(src);
-  updateProject({ image: project.image || src, images: project.images });
-}));
+els.projectPhotoInput.addEventListener("change", () => readImages(els.projectPhotoInput.files, addProjectImage));
 attachCoverImageHandlers(els.projectImages, "[data-project-image]", () => currentProject(), "project");
+els.closeImagePreviewModal?.addEventListener("click", closeImagePreview);
+els.imagePreviewModal?.addEventListener("click", (event) => {
+  if (event.target === els.imagePreviewModal) closeImagePreview();
+});
 els.projectImages.addEventListener("click", (event) => {
   if (els.projectImages.dataset.justCovered === "true") {
     els.projectImages.dataset.justCovered = "";
@@ -3909,8 +3988,12 @@ els.projectImages.addEventListener("click", (event) => {
   const index = event.target.closest("[data-project-image]")?.dataset.projectImage;
   const project = currentProject();
   if (index === undefined || !project) return;
-  project.images.splice(Number(index), 1);
-  updateProject({ images: project.images, image: project.images[0] || "" });
+  if (event.target.closest("[data-delete-image]")) {
+    project.images.splice(Number(index), 1);
+    updateProject({ images: project.images, image: project.images[0] || "" });
+    return;
+  }
+  openImagePreview(project.images[Number(index)]);
 });
 els.projectName.addEventListener("input", () => updateProject({ name: els.projectName.value }));
 els.projectType.addEventListener("change", () => updateProject({ type: els.projectType.value }));
@@ -4271,7 +4354,7 @@ els.patternSupplyUsageList.addEventListener("input", (event) => {
   pattern.updatedAt = new Date().toISOString();
   saveState();
 });
-els.patternImageInput.addEventListener("change", () => readImages(els.patternImageInput.files, (src) => { const pattern = editablePattern(); pattern.images.push(src); pattern.updatedAt = new Date().toISOString(); render(); }));
+els.patternImageInput.addEventListener("change", () => readImages(els.patternImageInput.files, addPatternImage));
 els.addSegmentBtn.addEventListener("click", () => {
   const pattern = editablePattern();
   const part = pattern.parts.find((item) => item.id === selectedPartId) || pattern.parts[0];
@@ -4445,8 +4528,13 @@ els.patternImages.addEventListener("click", (event) => {
   }
   const index = event.target.closest("[data-remove-image]")?.dataset.removeImage;
   if (index !== undefined) {
-    editablePattern().images.splice(Number(index), 1);
-    render();
+    const pattern = editablePattern();
+    if (event.target.closest("[data-delete-image]")) {
+      pattern.images.splice(Number(index), 1);
+      render();
+      return;
+    }
+    openImagePreview(pattern.images[Number(index)]);
   }
 });
 
@@ -4577,14 +4665,7 @@ els.stockTypeTabs.addEventListener("click", (event) => {
   activeStockType = type;
   render();
 });
-els.yarnImageInput.addEventListener("change", () => readImages(els.yarnImageInput.files, (src) => {
-  const yarn = state.yarns.find((item) => item.id === selectedYarnId);
-  if (!yarn) return;
-  yarn.images = yarn.images || [];
-  yarn.images.push(src);
-  yarn.image = yarn.image || src;
-  render();
-}));
+els.yarnImageInput.addEventListener("change", () => readImages(els.yarnImageInput.files, addYarnImage));
 attachCoverImageHandlers(els.yarnImagePreview, "[data-yarn-image]", () => state.yarns.find((item) => item.id === selectedYarnId), "yarn");
 els.yarnImagePreview.addEventListener("click", (event) => {
   if (els.yarnImagePreview.dataset.justCovered === "true") {
@@ -4594,9 +4675,13 @@ els.yarnImagePreview.addEventListener("click", (event) => {
   const index = event.target.closest("[data-yarn-image]")?.dataset.yarnImage;
   const yarn = state.yarns.find((item) => item.id === selectedYarnId);
   if (index === undefined || !yarn) return;
-  yarn.images.splice(Number(index), 1);
-  yarn.image = yarn.images[0] || "";
-  render();
+  if (event.target.closest("[data-delete-image]")) {
+    yarn.images.splice(Number(index), 1);
+    yarn.image = yarn.images[0] || "";
+    render();
+    return;
+  }
+  openImagePreview(yarn.images[Number(index)]);
 });
 els.yarnStockType.addEventListener("change", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.stockType = els.yarnStockType.value; activeStockType = els.yarnStockType.value; render(); });
 els.yarnColorName.addEventListener("input", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.colorName = els.yarnColorName.value; saveState(); });
@@ -5063,9 +5148,7 @@ els.brandCardWeight.addEventListener("input", () => {
   state.brandWeights[selectedBrandName] = Number(els.brandCardWeight.value || 0);
   saveState();
 });
-els.brandCardImageInput.addEventListener("change", () => readImages(els.brandCardImageInput.files, (src) => {
-  els.brandCardImageInput.dataset.image = src;
-}));
+els.brandCardImageInput.addEventListener("change", () => readImages(els.brandCardImageInput.files, addBrandCardPendingImage));
 els.applyBrandCardFolderBtn.addEventListener("click", () => {
   const card = brandCard();
   const folderUrl = els.brandCardFolderUrl.value.trim();

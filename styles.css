@@ -75,7 +75,12 @@ body[data-theme="charcoal"] {
   --green: #7a9a80;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 html {
   height: 100%;
@@ -98,6 +103,11 @@ body {
 }
 
 button, input, select, textarea { font: inherit; }
+input, textarea, select {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
 button { cursor: pointer; }
 
 .app-shell {
@@ -669,6 +679,33 @@ textarea {
   border-radius: 50%;
   background: rgba(0,0,0,.55);
   color: white;
+  pointer-events: auto;
+}
+.image-preview-modal {
+  align-items: center;
+  justify-items: center;
+  background: rgba(0,0,0,.72);
+}
+.image-preview-sheet {
+  position: relative;
+  width: min(92vw, 760px);
+  max-height: 86vh;
+  display: grid;
+  place-items: center;
+}
+.image-preview-sheet img {
+  max-width: 100%;
+  max-height: 86vh;
+  border-radius: 18px;
+  object-fit: contain;
+  box-shadow: var(--shadow);
+}
+.image-preview-close {
+  position: absolute;
+  top: -14px;
+  right: -10px;
+  z-index: 1;
+  background: var(--paper);
 }
 .segment-toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .bottom-segment-toolbar { margin-top: 12px; }
