@@ -2060,7 +2060,7 @@ function sortedTemplatePatterns() {
   const mode = normalizePatternSortMode(state.settings.patternSort);
   return templatePatterns().slice().sort((a, b) => {
     if (mode === "pinned-desc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
-    if (mode === "pinned-asc") return Number(a.pinned) - Number(b.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
+    if (mode === "pinned-asc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
     const pinOrder = Number(b.pinned) - Number(a.pinned);
     if (pinOrder) return pinOrder;
     if (mode === "updated-desc") return compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
@@ -2084,6 +2084,15 @@ function supplyPreviewText(yarn) {
 
 function templatePatterns() {
   return state.patterns.filter((pattern) => !pattern.isProjectCopy);
+}
+
+function insertTemplatePattern(pattern) {
+  const pinnedIndexes = state.patterns
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !item.isProjectCopy && item.pinned)
+    .map(({ index }) => index);
+  const insertAt = pinnedIndexes.length ? Math.max(...pinnedIndexes) + 1 : 0;
+  state.patterns.splice(insertAt, 0, pattern);
 }
 
 function selectedProjectsForAction() {
@@ -2315,7 +2324,7 @@ function importPatternPackage(payload) {
   normalized.importKey = importKey;
   delete normalized.isProjectCopy;
   delete normalized.sourcePatternId;
-  state.patterns.unshift(normalized);
+  insertTemplatePattern(normalized);
   selectedPatternId = normalized.id;
   saveState();
   return normalized;
@@ -4588,7 +4597,7 @@ els.newPatternBtn.addEventListener("click", () => {
       parts: [{ id: crypto.randomUUID(), name: "部分 1", notes: "", segments: [{ id: crypto.randomUUID(), repeat: 1, note: "", items: [] }] }],
       groups: []
   };
-  state.patterns.unshift(pattern);
+  insertTemplatePattern(pattern);
   selectedPatternId = pattern.id;
   switchView("patternEdit");
 });
@@ -4717,7 +4726,7 @@ els.convertTextPatternBtn.addEventListener("click", () => {
     parts: result.parts,
     groups: []
   };
-  state.patterns.unshift(pattern);
+  insertTemplatePattern(pattern);
   selectedPatternId = pattern.id;
   if (result.unparsed.length) {
     els.textPatternUnparsed.classList.remove("hidden");
