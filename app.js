@@ -1343,8 +1343,14 @@ function loadState() {
       const old = localStorage.getItem(key);
       if (old) return migrateOldState(JSON.parse(old));
     }
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        localStorage.setItem(`${STORAGE_KEY}-recovery-${Date.now()}`, saved);
+      } catch {}
+    }
+    console.warn("Failed to load local data; kept a recovery copy.", error);
   }
   return structuredClone(defaultState);
 }
