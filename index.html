@@ -748,7 +748,8 @@
           <details class="reference-box">
             <summary>參考針法與格式</summary>
             <p>每個中文標題會建立一個部分；部分下面可輸入 R1、R2 或 R3-9。</p>
-            <p>例：身體 / R1 6X,V,A / R2 3(2X,A,2X) / 手 / R1 12X。</p>
+            <p>例：身體 // 主體備註 / R1 6X,V,A // 膚色環起 / R2 3(2X,A,2X) / 手 / R1 12X。</p>
+            <p>使用 // 可加入備註；放在部分標題後是部分備註，放在 R1 後是段落備註。</p>
             <p>可用格式：6X、X x 6、3(2X,A,2X)、2(5X,W)，也可用逗號分隔針法。</p>
             <p id="textPatternReference"></p>
           </details>
@@ -758,7 +759,7 @@
           </label>
           <label class="wide-field">
             貼上文字織圖
-            <textarea id="textPatternInput" rows="8" placeholder="身體&#10;R1 6X,V,A&#10;R2 3(2X,A,2X)&#10;R3-9 V,2(5X,W),5X,X&#10;手&#10;R1 12X&#10;R2 2X,A,10V"></textarea>
+            <textarea id="textPatternInput" rows="8" placeholder="身體 // 主體備註&#10;R1 6X,V,A // 膚色環起&#10;R2 3(2X,A,2X)&#10;R3-9 V,2(5X,W),5X,X // 不加不減&#10;手&#10;R1 12X&#10;R2 2X,A,10V"></textarea>
           </label>
           <button class="primary-button full-width" id="convertTextPatternBtn">匯入成織圖</button>
           <div class="unparsed-list hidden" id="textPatternUnparsed"></div>

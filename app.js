@@ -1717,10 +1717,17 @@ function parseCountedToken(raw) {
   return { value: token, count: 1 };
 }
 
+function normalizeImportedPatternText(text) {
+  return String(text || "")
+    .replace(/[，、]/g, ",")
+    .replace(/[（]/g, "(")
+    .replace(/[）]/g, ")");
+}
+
 function parseImportedItems(text) {
   const items = [];
   const unresolved = [];
-  splitPatternTokens(text).forEach((token) => {
+  splitPatternTokens(normalizeImportedPatternText(text)).forEach((token) => {
     const { value, count } = parseCountedToken(token);
     const groupMatch = value.match(/^[\(（](.+)[\)）]$/);
     if (groupMatch) {
@@ -1729,7 +1736,14 @@ function parseImportedItems(text) {
         const parsed = parseCountedToken(innerToken);
         const stitch = findStitch(parsed.value);
         if (!stitch) {
-          unresolved.push(innerToken);
+          const compactItems = splitCompactStitches(parsed.value);
+          if (compactItems.length) {
+            compactItems.forEach((item) => {
+              groupItems.push({ ...item, count: item.count * parsed.count });
+            });
+          } else {
+            unresolved.push(innerToken);
+          }
           return;
         }
         groupItems.push({ stitchId: stitch.id, count: parsed.count });
@@ -1739,7 +1753,12 @@ function parseImportedItems(text) {
     }
     const stitch = findStitch(value);
     if (!stitch) {
-      unresolved.push(token);
+      const compactItems = splitCompactStitches(value);
+      if (compactItems.length) {
+        items.push({ type: "group", groupName: value, count, items: compactItems });
+      } else {
+        unresolved.push(token);
+      }
       return;
     }
     items.push({ stitchId: stitch.id, count });
@@ -1770,8 +1789,12 @@ function parseTextPattern(text) {
     if (/^-{3,}$/.test(raw)) return;
     const match = raw.match(/^(?:R|第)?\s*(\d+)(?:\s*[-~～－]\s*(\d+))?(?:\s*[圈段])?(?::|：|\s+)\s*(.+)$/i);
     if (!match) {
-      if (/^[\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9\s_-]*$/.test(raw)) {
-        currentPart = { id: crypto.randomUUID(), name: raw, notes: "", segments: [] };
+      const [partNameText, ...partNoteParts] = raw.split("//");
+      const partName = partNameText.trim();
+      const partNote = partNoteParts.join("//").trim();
+      const titleMatch = partName.match(/^[\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9\s_*\-×xX]*$/);
+      if (titleMatch) {
+        currentPart = { id: crypto.randomUUID(), name: partName, notes: partNote, segments: [] };
         parts.push(currentPart);
       } else {
         unparsed.push(`第 ${index + 1} 行：${raw}`);
@@ -1780,7 +1803,9 @@ function parseTextPattern(text) {
     }
     const start = Number(match[1]);
     const end = Math.max(start, Number(match[2] || start));
-    const parsed = parseImportedItems(match[3]);
+    const [stitchText, ...noteParts] = match[3].split("//");
+    const note = noteParts.join("//").trim();
+    const parsed = parseImportedItems(stitchText);
     if (!parsed.items.length) {
       unparsed.push(`第 ${index + 1} 行：${raw}`);
       return;
@@ -1788,7 +1813,7 @@ function parseTextPattern(text) {
     parsed.unresolved.forEach((item) => unparsed.push(`第 ${index + 1} 行無法辨識：${item}`));
     const part = ensurePart();
     for (let round = start; round <= end; round += 1) {
-      part.segments.push({ id: crypto.randomUUID(), repeat: 1, note: "", items: structuredClone(parsed.items) });
+      part.segments.push({ id: crypto.randomUUID(), repeat: 1, note, items: structuredClone(parsed.items) });
     }
   });
   const validParts = parts.filter((part) => part.segments.length);
@@ -1799,6 +1824,24 @@ function parseTextPattern(text) {
 function findStitch(value) {
   const normalized = String(value).toLowerCase();
   return state.stitches.find((stitch) => [stitch.id, stitch.zh, stitch.letter].some((item) => String(item).toLowerCase() === normalized));
+}
+
+function splitCompactStitches(value) {
+  const text = String(value || "").trim();
+  if (!/^[A-Za-z]+$/.test(text)) return [];
+  const letters = state.stitches
+    .map((stitch) => ({ id: stitch.id, letter: String(stitch.letter || "").trim() }))
+    .filter((item) => item.letter && /^[A-Za-z]+$/.test(item.letter))
+    .sort((a, b) => b.letter.length - a.letter.length);
+  const result = [];
+  let index = 0;
+  while (index < text.length) {
+    const match = letters.find((item) => text.slice(index, index + item.letter.length).toLowerCase() === item.letter.toLowerCase());
+    if (!match) return [];
+    result.push({ stitchId: match.id, count: 1 });
+    index += match.letter.length;
+  }
+  return result.length > 1 ? result : [];
 }
 
 function expandedRows(pattern) {
@@ -5802,6 +5845,24 @@ document.querySelectorAll(".modal").forEach((modal) => {
     }
     modal.classList.add("hidden");
   });
+});
+
+function selectNumericInput(input) {
+  if (!(input instanceof HTMLInputElement)) return;
+  if (input.type !== "number" || input.disabled || input.readOnly) return;
+  requestAnimationFrame(() => {
+    try {
+      input.select();
+    } catch {}
+  });
+}
+
+document.addEventListener("focusin", (event) => {
+  selectNumericInput(event.target);
+});
+
+document.addEventListener("pointerup", (event) => {
+  if (event.target === document.activeElement) selectNumericInput(event.target);
 });
 
 registerServiceWorker();
