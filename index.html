@@ -22,18 +22,12 @@
             <h2>作品</h2>
             <div class="inline-actions">
               <select class="sort-menu" id="projectSort" aria-label="作品排序">
-                <option value="pinned-desc">置頂優先</option>
-                <option value="pinned-asc">置頂最後</option>
-                <option value="progress-desc">完成度高</option>
-                <option value="progress-asc">完成度低</option>
-                <option value="type-asc">類型 A-Z</option>
-                <option value="type-desc">類型 Z-A</option>
-                <option value="updated-desc">最近更新</option>
-                <option value="updated-asc">最早更新</option>
+                <option value="updated-desc">時間 新到舊</option>
+                <option value="updated-asc">時間 舊到新</option>
                 <option value="name-asc">名稱 A-Z</option>
                 <option value="name-desc">名稱 Z-A</option>
-                <option value="pattern-asc">織圖 A-Z</option>
-                <option value="pattern-desc">織圖 Z-A</option>
+                <option value="type-asc">類別 A-Z</option>
+                <option value="type-desc">類別 Z-A</option>
               </select>
               <button class="primary-button compact" id="newProjectBtn">+ 新增</button>
             </div>
@@ -150,14 +144,12 @@
             <h2>織圖</h2>
             <div class="inline-actions">
               <select class="sort-menu" id="patternSort" aria-label="織圖排序">
-                <option value="pinned-desc">置頂優先</option>
-                <option value="pinned-asc">置頂最後</option>
-                <option value="updated-desc">最近更新</option>
-                <option value="updated-asc">最早更新</option>
+                <option value="updated-desc">時間 新到舊</option>
+                <option value="updated-asc">時間 舊到新</option>
                 <option value="name-asc">名稱 A-Z</option>
                 <option value="name-desc">名稱 Z-A</option>
-                <option value="rounds-desc">段數多</option>
-                <option value="rounds-asc">段數少</option>
+                <option value="type-asc">類別 A-Z</option>
+                <option value="type-desc">類別 Z-A</option>
               </select>
               <button class="outline-button compact" id="openPatternImportBtn">匯入</button>
               <button class="primary-button compact" id="newPatternBtn">+ 新增</button>
@@ -480,6 +472,8 @@
           </div>
           <div class="button-row modal-actions">
             <button class="outline-button" id="pinPatternBtn">置頂</button>
+            <button class="outline-button" id="folderPatternBtn">加入資料夾</button>
+            <button class="outline-button hidden" id="removePatternFolderBtn">移出資料夾</button>
             <button class="outline-button" id="sharePatternBtn">分享</button>
             <button class="danger-button" id="deletePatternFromListBtn">刪除</button>
           </div>

@@ -24,8 +24,8 @@ const defaultData = {
     "displayMode": "letter",
     "roundLabelMode": "r",
     "themeColor": "honey",
-    "projectSort": "type-asc",
-    "patternSort": "pinned-desc"
+    "projectSort": "updated-desc",
+    "patternSort": "updated-desc"
   },
   "brands": [
     "未指定",
@@ -859,6 +859,7 @@ const defaultData = {
       "url": ""
     }
   ],
+  "patternFolders": [],
   "yarnFolders": [],
   "stitches": [
     {
@@ -1037,6 +1038,7 @@ let actionPatternId = null;
 let actionProjectId = null;
 let actionYarnId = null;
 let actionFolderName = "";
+let actionPatternFolderName = "";
 let actionYarnFolderName = "";
 let selectedProjectIds = new Set();
 let selectedPatternIds = new Set();
@@ -1045,6 +1047,7 @@ let selectedColorCardStockIds = new Set();
 let suppressNextSelectionClickUntil = 0;
 let editingCommonGroupId = null;
 let activeProjectFolder = null;
+let activePatternFolder = null;
 let activeYarnFolder = null;
 let folderPickerMode = "project";
 let targetSegmentForGroupId = null;
@@ -1234,6 +1237,8 @@ const els = {
   closePatternActionModal: document.querySelector("#closePatternActionModal"),
   patternActionTitle: document.querySelector("#patternActionTitle"),
   pinPatternBtn: document.querySelector("#pinPatternBtn"),
+  folderPatternBtn: document.querySelector("#folderPatternBtn"),
+  removePatternFolderBtn: document.querySelector("#removePatternFolderBtn"),
   sharePatternBtn: document.querySelector("#sharePatternBtn"),
   deletePatternFromListBtn: document.querySelector("#deletePatternFromListBtn"),
   patternShareModal: document.querySelector("#patternShareModal"),
@@ -1304,6 +1309,30 @@ function ensurePatternSortOptions() {
   const typeAsc = new Option("類型 A-Z", "type-asc");
   const typeDesc = new Option("類型 Z-A", "type-desc");
   nameDesc?.after(typeAsc, typeDesc);
+}
+
+function ensurePatternSortOptions() {
+  if (!els.patternSort) return;
+  els.patternSort.innerHTML = `
+    <option value="updated-desc">時間 新到舊</option>
+    <option value="updated-asc">時間 舊到新</option>
+    <option value="name-asc">名稱 A-Z</option>
+    <option value="name-desc">名稱 Z-A</option>
+    <option value="type-asc">類別 A-Z</option>
+    <option value="type-desc">類別 Z-A</option>
+  `;
+}
+
+function ensureProjectSortOptions() {
+  if (!els.projectSort) return;
+  els.projectSort.innerHTML = `
+    <option value="updated-desc">時間 新到舊</option>
+    <option value="updated-asc">時間 舊到新</option>
+    <option value="name-asc">名稱 A-Z</option>
+    <option value="name-desc">名稱 Z-A</option>
+    <option value="type-asc">類別 A-Z</option>
+    <option value="type-desc">類別 Z-A</option>
+  `;
 }
 
 function loadState() {
@@ -1399,6 +1428,7 @@ function normalizeState(input) {
     brandCards: Array.isArray(input.brandCards) ? input.brandCards : structuredClone(defaultState.brandCards),
     projectTypes: Array.isArray(input.projectTypes) && input.projectTypes.length ? input.projectTypes : structuredClone(defaultState.projectTypes),
     projectFolders: Array.isArray(input.projectFolders) ? input.projectFolders : structuredClone(defaultState.projectFolders),
+    patternFolders: Array.isArray(input.patternFolders) ? input.patternFolders : structuredClone(defaultState.patternFolders),
     yarnFolders: Array.isArray(input.yarnFolders) ? input.yarnFolders : structuredClone(defaultState.yarnFolders),
     commonGroups: Array.isArray(input.commonGroups) ? input.commonGroups : structuredClone(defaultState.commonGroups),
     tools: Array.isArray(input.tools) ? input.tools : structuredClone(defaultState.tools),
@@ -1417,6 +1447,7 @@ function normalizeState(input) {
     createdAt: pattern.createdAt || new Date().toISOString(),
     updatedAt: pattern.updatedAt || pattern.createdAt || new Date().toISOString(),
     pinned: Boolean(pattern.pinned),
+    folder: pattern.folder || "",
     isProjectCopy: Boolean(pattern.isProjectCopy),
     sourcePatternId: pattern.sourcePatternId || "",
     importKey: pattern.importKey || "",
@@ -1532,6 +1563,10 @@ function normalizeState(input) {
   }));
 
   next.projectFolders = next.projectFolders.map((folder) => ({
+    name: typeof folder === "string" ? folder : folder.name,
+    pinned: Boolean(folder?.pinned)
+  })).filter((folder) => folder.name);
+  next.patternFolders = next.patternFolders.map((folder) => ({
     name: typeof folder === "string" ? folder : folder.name,
     pinned: Boolean(folder?.pinned)
   })).filter((folder) => folder.name);
@@ -2007,21 +2042,33 @@ function projectPatternName(project) {
 
 function normalizeProjectSortMode(mode) {
   return ({
-    pinned: "pinned-desc",
+    pinned: "updated-desc",
+    "pinned-desc": "updated-desc",
+    "pinned-asc": "updated-asc",
+    progress: "updated-desc",
+    "progress-desc": "updated-desc",
+    "progress-asc": "updated-asc",
+    pattern: "updated-desc",
+    "pattern-asc": "updated-desc",
+    "pattern-desc": "updated-desc",
     type: "type-asc",
     updated: "updated-desc",
-    name: "name-asc",
-    pattern: "pattern-asc"
-  })[mode] || mode || "pinned-desc";
+    name: "name-asc"
+  })[mode] || (["updated-desc", "updated-asc", "name-asc", "name-desc", "type-asc", "type-desc"].includes(mode) ? mode : "updated-desc");
 }
 
 function normalizePatternSortMode(mode) {
   return ({
-    pinned: "pinned-desc",
+    pinned: "updated-desc",
+    "pinned-desc": "updated-desc",
+    "pinned-asc": "updated-asc",
+    rounds: "updated-desc",
+    "rounds-desc": "updated-desc",
+    "rounds-asc": "updated-asc",
     type: "type-asc",
     updated: "updated-desc",
     name: "name-asc"
-  })[mode] || mode || "pinned-desc";
+  })[mode] || (["updated-desc", "updated-asc", "name-asc", "name-desc", "type-asc", "type-desc"].includes(mode) ? mode : "updated-desc");
 }
 
 function compareText(a, b, direction = "asc") {
@@ -2037,21 +2084,13 @@ function compareDate(a, b, direction = "desc") {
 function sortedProjects() {
   const mode = normalizeProjectSortMode(state.settings.projectSort);
   return state.projects.slice().sort((a, b) => {
-    if (mode === "pinned-desc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
-    if (mode === "pinned-asc") return Number(a.pinned) - Number(b.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     const pinOrder = Number(b.pinned) - Number(a.pinned);
     if (pinOrder) return pinOrder;
-    if (mode === "progress-desc") return projectProgress(b).percent - projectProgress(a).percent || compareText(a.name, b.name);
-    if (mode === "progress-asc") return projectProgress(a).percent - projectProgress(b).percent || compareText(a.name, b.name);
     if (mode === "type-asc") return compareText(a.type, b.type) || compareText(a.name, b.name);
     if (mode === "type-desc") return compareText(a.type, b.type, "desc") || compareText(a.name, b.name);
     if (mode === "updated-desc") return compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "updated-asc") return compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
-    if (mode === "type-asc") return compareText(a.type, b.type) || compareText(a.name, b.name);
-    if (mode === "type-desc") return compareText(a.type, b.type, "desc") || compareText(a.name, b.name);
     if (mode === "name-desc") return compareText(a.name, b.name, "desc");
-    if (mode === "pattern-asc") return compareText(projectPatternName(a), projectPatternName(b)) || compareText(a.name, b.name);
-    if (mode === "pattern-desc") return compareText(projectPatternName(a), projectPatternName(b), "desc") || compareText(a.name, b.name);
     return compareText(a.name, b.name);
   });
 }
@@ -2059,15 +2098,13 @@ function sortedProjects() {
 function sortedTemplatePatterns() {
   const mode = normalizePatternSortMode(state.settings.patternSort);
   return templatePatterns().slice().sort((a, b) => {
-    if (mode === "pinned-desc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
-    if (mode === "pinned-asc") return Number(b.pinned) - Number(a.pinned) || compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
     const pinOrder = Number(b.pinned) - Number(a.pinned);
     if (pinOrder) return pinOrder;
     if (mode === "updated-desc") return compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "updated-asc") return compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
+    if (mode === "type-asc") return compareText(a.type, b.type) || compareText(a.name, b.name);
+    if (mode === "type-desc") return compareText(a.type, b.type, "desc") || compareText(a.name, b.name);
     if (mode === "name-desc") return compareText(a.name, b.name, "desc");
-    if (mode === "rounds-desc") return expandedRows(b).length - expandedRows(a).length || compareText(a.name, b.name);
-    if (mode === "rounds-asc") return expandedRows(a).length - expandedRows(b).length || compareText(a.name, b.name);
     return compareText(a.name, b.name);
   });
 }
@@ -2136,6 +2173,30 @@ function projectFolderRecords() {
   }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || compareText(a.name, b.name));
 }
 
+function patternFolderName(pattern) {
+  return (pattern.folder || "").trim();
+}
+
+function patternFolders() {
+  return Array.from(new Set(templatePatterns().map((pattern) => patternFolderName(pattern)).filter(Boolean))).sort((a, b) => compareText(a, b));
+}
+
+function patternFolderMeta(name) {
+  let meta = state.patternFolders.find((folder) => folder.name === name);
+  if (!meta) {
+    meta = { name, pinned: false };
+    state.patternFolders.push(meta);
+  }
+  return meta;
+}
+
+function patternFolderRecords() {
+  return patternFolders().map((name) => {
+    const patterns = templatePatterns().filter((pattern) => patternFolderName(pattern) === name);
+    return { name, patterns, pinned: patternFolderMeta(name).pinned };
+  }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || compareText(a.name, b.name));
+}
+
 function applyFolderToSelectedProjects(folder) {
   const projects = selectedProjectsForAction();
   if (!projects.length) return;
@@ -2149,9 +2210,31 @@ function applyFolderToSelectedProjects(folder) {
   render();
 }
 
+function applyFolderToSelectedPatterns(folder) {
+  const patterns = selectedPatternsForAction();
+  if (!patterns.length) return;
+  patterns.forEach((pattern) => {
+    pattern.folder = folder.trim();
+    pattern.updatedAt = new Date().toISOString();
+  });
+  selectedPatternIds.clear();
+  els.patternActionModal.classList.add("hidden");
+  els.projectFolderModal.classList.add("hidden");
+  render();
+}
+
 function openProjectFolderPicker() {
   folderPickerMode = "project";
   const folders = projectFolders();
+  els.projectFolderOptions.innerHTML = folders.length
+    ? folders.map((folder) => `<button class="folder-option" data-folder-option="${escapeHtml(folder)}">${escapeHtml(folder)}</button>`).join("")
+    : `<p class="empty-note">目前沒有資料夾。</p>`;
+  els.projectFolderModal.classList.remove("hidden");
+}
+
+function openPatternFolderPicker() {
+  folderPickerMode = "pattern";
+  const folders = patternFolders();
   els.projectFolderOptions.innerHTML = folders.length
     ? folders.map((folder) => `<button class="folder-option" data-folder-option="${escapeHtml(folder)}">${escapeHtml(folder)}</button>`).join("")
     : `<p class="empty-note">目前沒有資料夾。</p>`;
@@ -2210,6 +2293,7 @@ function updatePatternActionSheet() {
   const selected = selectedPatternsForAction();
   els.patternActionTitle.textContent = selected.length ? `已選 ${selected.length} 個織圖 · 可繼續點選` : "織圖選項";
   els.pinPatternBtn.textContent = selected.length && selected.every((pattern) => pattern.pinned) ? "取消置頂" : "置頂";
+  els.removePatternFolderBtn?.classList.toggle("hidden", !activePatternFolder);
 }
 
 function selectedYarnsForAction() {
@@ -2749,6 +2833,7 @@ function renderChrome() {
 
 function renderProjects() {
   els.projectList.innerHTML = "";
+  ensureProjectSortOptions();
   els.projectSort.value = normalizeProjectSortMode(state.settings.projectSort);
   if (!state.projects.length) {
     els.projectList.innerHTML = `<p class="empty-note">尚無作品，按右上角「新增」建立第一個作品。</p>`;
@@ -2852,6 +2937,7 @@ function renderProjectFolders() {
         const meta = folderMeta(folder.name);
         els.folderActionTitle.textContent = folder.name;
         els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
+        els.deleteFolderBtn.textContent = "刪除資料夾與作品";
         els.folderActionModal.classList.remove("hidden");
       }, LONG_PRESS_MS);
     });
@@ -2990,7 +3076,23 @@ function renderPatterns() {
   els.patternList.innerHTML = "";
   ensurePatternSortOptions();
   els.patternSort.value = normalizePatternSortMode(state.settings.patternSort);
-  const patterns = sortedTemplatePatterns();
+  const patterns = activePatternFolder
+    ? sortedTemplatePatterns().filter((pattern) => patternFolderName(pattern) === activePatternFolder)
+    : sortedTemplatePatterns().filter((pattern) => !patternFolderName(pattern));
+  if (!activePatternFolder) renderPatternFolders();
+  if (activePatternFolder) {
+    const back = document.createElement("button");
+    back.className = "folder-back-button";
+    back.type = "button";
+    back.textContent = `← ${activePatternFolder}`;
+    back.addEventListener("click", () => {
+      activePatternFolder = null;
+      selectedPatternIds.clear();
+      renderPatterns();
+    });
+    els.patternList.append(back);
+  }
+  if (!patterns.length && !activePatternFolder && patternFolderRecords().length) return;
   if (!patterns.length) {
     els.patternList.innerHTML = `<p class="empty-note">尚無織圖，按右上角「新增」建立第一個織圖。</p>`;
     return;
@@ -3002,7 +3104,7 @@ function renderPatterns() {
       ${pattern.images[0] ? `<img src="${pattern.images[0]}" alt="">` : `<span class="empty-thumb">圖</span>`}
       <span>
         <strong>${escapeHtml(pattern.name)}</strong>
-        <span class="meta-row"><span class="pill">${escapeHtml(pattern.type || "作品")}</span><span>${pattern.parts.length} 個部分</span>${pattern.notes ? `<span>${escapeHtml(pattern.notes)}</span>` : ""}</span>
+        <span class="meta-row"><span class="pill">${escapeHtml(pattern.type || "作品")}</span><span>${pattern.parts.length} 個部分</span>${pattern.folder ? `<span>${escapeHtml(pattern.folder)}</span>` : ""}${pattern.notes ? `<span>${escapeHtml(pattern.notes)}</span>` : ""}</span>
       </span>
     `;
     let timer = null;
@@ -3040,6 +3142,46 @@ function renderPatterns() {
       }
       selectedPatternId = pattern.id;
       switchView("patternEdit");
+    });
+    els.patternList.append(card);
+  });
+}
+
+function renderPatternFolders() {
+  patternFolderRecords().forEach((folder) => {
+    const card = document.createElement("button");
+    const images = folder.patterns.map((pattern) => pattern.images?.[0]).filter(Boolean).slice(0, 4);
+    card.className = `pattern-library-card folder-card ${folder.pinned ? "pinned-card" : ""}`;
+    card.innerHTML = `
+      <span class="folder-collage ${images.length ? "" : "empty-thumb"}">
+        ${images.length ? images.map((src) => `<img src="${src}" alt="">`).join("") : "資料夾"}
+      </span>
+      <span>
+        <span class="card-title-row"><strong>${escapeHtml(folder.name)}</strong>${folder.pinned ? "<strong>置頂</strong>" : ""}</span>
+        <span class="meta-row"><span>${folder.patterns.length} 個織圖</span></span>
+      </span>
+    `;
+    let timer = null;
+    let longPressed = false;
+    card.addEventListener("pointerdown", (event) => {
+      longPressed = false;
+      timer = startLongPress(event, () => {
+        longPressed = true;
+        actionPatternFolderName = folder.name;
+        const meta = patternFolderMeta(folder.name);
+        els.folderActionTitle.textContent = folder.name;
+        els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
+        els.deleteFolderBtn.textContent = "刪除資料夾與織圖";
+        els.folderActionModal.classList.remove("hidden");
+      });
+    });
+    card.addEventListener("pointerup", () => timer?.());
+    card.addEventListener("pointerleave", () => timer?.());
+    card.addEventListener("click", () => {
+      if (longPressed) return;
+      activePatternFolder = folder.name;
+      selectedPatternIds.clear();
+      renderPatterns();
     });
     els.patternList.append(card);
   });
@@ -3313,6 +3455,7 @@ function renderYarnFolders() {
         const meta = yarnFolderMeta(folder.name);
         els.folderActionTitle.textContent = folder.name;
         els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
+        els.deleteFolderBtn.textContent = "刪除資料夾與庫存";
         els.folderActionModal.classList.remove("hidden");
       }, LONG_PRESS_MS);
     });
@@ -3908,6 +4051,7 @@ function applySupplyDeductions() {
 function switchView(view) {
   previousView = activeView;
   if (view !== "projects" && view !== "detail") activeProjectFolder = null;
+  if (view !== "patterns" && view !== "patternEdit") activePatternFolder = null;
   activeView = view;
   render();
   requestAnimationFrame(() => {
@@ -4426,28 +4570,56 @@ els.removeProjectFolderBtn.addEventListener("click", () => {
   els.projectActionModal.classList.add("hidden");
   render();
 });
+els.folderPatternBtn?.addEventListener("click", () => {
+  const patterns = selectedPatternsForAction();
+  if (!patterns.length) return;
+  openPatternFolderPicker();
+});
+els.removePatternFolderBtn?.addEventListener("click", () => {
+  const patterns = selectedPatternsForAction();
+  if (!patterns.length) return;
+  patterns.forEach((pattern) => {
+    pattern.folder = "";
+    pattern.updatedAt = new Date().toISOString();
+  });
+  selectedPatternIds.clear();
+  els.patternActionModal.classList.add("hidden");
+  render();
+});
 els.closeProjectFolderModal.addEventListener("click", () => els.projectFolderModal.classList.add("hidden"));
 els.projectFolderOptions.addEventListener("click", (event) => {
   const folder = event.target.closest("[data-folder-option]")?.dataset.folderOption;
   if (!folder) return;
-  if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
+  if (folderPickerMode === "pattern") applyFolderToSelectedPatterns(folder);
+  else if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
   else applyFolderToSelectedProjects(folder);
 });
 els.newProjectFolderBtn.addEventListener("click", () => {
   const folder = prompt("新增資料夾名稱");
   if (folder === null) return;
   if (!folder.trim()) return;
-  const folders = folderPickerMode === "yarn" ? yarnFolders() : projectFolders();
+  const folders = folderPickerMode === "pattern" ? patternFolders() : (folderPickerMode === "yarn" ? yarnFolders() : projectFolders());
   if (warnDuplicateName(folder.trim(), folders, "資料夾")) return;
-  if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
+  if (folderPickerMode === "pattern") applyFolderToSelectedPatterns(folder);
+  else if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
   else applyFolderToSelectedProjects(folder);
 });
 els.closeFolderActionModal.addEventListener("click", () => {
   actionFolderName = "";
+  actionPatternFolderName = "";
   actionYarnFolderName = "";
+  els.deleteFolderBtn.textContent = "刪除資料夾與作品";
   els.folderActionModal.classList.add("hidden");
 });
 els.pinFolderBtn.addEventListener("click", () => {
+  if (actionPatternFolderName) {
+    const meta = patternFolderMeta(actionPatternFolderName);
+    meta.pinned = !meta.pinned;
+    actionPatternFolderName = "";
+    els.folderActionModal.classList.add("hidden");
+    render();
+    return;
+  }
   if (actionYarnFolderName) {
     const meta = yarnFolderMeta(actionYarnFolderName);
     meta.pinned = !meta.pinned;
@@ -4464,6 +4636,25 @@ els.pinFolderBtn.addEventListener("click", () => {
   render();
 });
 els.deleteFolderBtn.addEventListener("click", () => {
+  if (actionPatternFolderName) {
+    const count = templatePatterns().filter((pattern) => patternFolderName(pattern) === actionPatternFolderName).length;
+    if (!confirm(`確定要刪除「${actionPatternFolderName}」資料夾與裡面的 ${count} 個織圖嗎？`)) return;
+    const ids = new Set(templatePatterns().filter((pattern) => patternFolderName(pattern) === actionPatternFolderName).map((pattern) => pattern.id));
+    state.patterns = state.patterns.filter((pattern) => !ids.has(pattern.id));
+    state.projects.forEach((project) => {
+      if (ids.has(project.activePatternId)) {
+        project.activePatternId = "";
+        project.patternIds = [];
+      }
+    });
+    state.patternFolders = state.patternFolders.filter((folder) => folder.name !== actionPatternFolderName);
+    if (activePatternFolder === actionPatternFolderName) activePatternFolder = null;
+    selectedPatternId = templatePatterns()[0]?.id || state.patterns[0]?.id || null;
+    actionPatternFolderName = "";
+    els.folderActionModal.classList.add("hidden");
+    render();
+    return;
+  }
   if (actionYarnFolderName) {
     const count = state.yarns.filter((yarn) => (yarn.stockType || "yarn") === activeStockType && yarnFolderName(yarn) === actionYarnFolderName).length;
     if (!confirm(`確定要刪除「${actionYarnFolderName}」資料夾與裡面的 ${count} 個庫存嗎？`)) return;
