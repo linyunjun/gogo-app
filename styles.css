@@ -682,20 +682,23 @@ textarea {
   pointer-events: auto;
 }
 .image-preview-modal {
+  display: flex;
   align-items: center;
-  justify-items: center;
+  justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
   background: rgba(0,0,0,.72);
 }
 .image-preview-sheet {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: min(92vw, 760px);
-  max-height: 86vh;
-  display: grid;
-  place-items: center;
+  max-height: calc(100vh - 64px);
 }
 .image-preview-sheet img {
   max-width: 100%;
-  max-height: 86vh;
+  max-height: calc(100vh - 64px);
   border-radius: 18px;
   object-fit: contain;
   box-shadow: var(--shadow);
@@ -1408,7 +1411,7 @@ textarea {
   .brand-card-entry-row {
     grid-template-columns: 58px 56px 84px 140px 64px;
   }
-  .tool-row { align-items: flex-start; flex-direction: column; padding: 12px; }
+  .tool-row:not(.settings-tool-row):not(.common-group-display) { align-items: flex-start; flex-direction: column; padding: 12px; }
   .tool-row.common-group-display {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -1418,8 +1421,10 @@ textarea {
     grid-template-columns: minmax(0, 1fr);
   }
   .settings-tool-row {
+    display: grid;
     grid-template-columns: 28px minmax(0, 1fr);
     align-items: center;
+    padding: 12px;
   }
   .bulk-stock-row { grid-template-columns: 1fr; }
   .supply-deduct-row { grid-template-columns: 1fr 1fr 72px; }

@@ -857,6 +857,7 @@ const defaultData = {
       "url": ""
     }
   ],
+  "yarnFolders": [],
   "stitches": [
     {
       "id": "ch",
@@ -997,6 +998,7 @@ const defaultState = {
   tools: structuredClone(defaultData.tools),
   stitches: structuredClone(defaultData.stitches),
   projectFolders: [],
+  yarnFolders: [],
   patterns: [],
   projects: [],
   yarns: []
@@ -1033,12 +1035,16 @@ let actionPatternId = null;
 let actionProjectId = null;
 let actionYarnId = null;
 let actionFolderName = "";
+let actionYarnFolderName = "";
 let selectedProjectIds = new Set();
 let selectedPatternIds = new Set();
 let selectedYarnIds = new Set();
+let selectedColorCardStockIds = new Set();
 let suppressNextSelectionClickUntil = 0;
 let editingCommonGroupId = null;
 let activeProjectFolder = null;
+let activeYarnFolder = null;
+let folderPickerMode = "project";
 let targetSegmentForGroupId = null;
 let activeStockType = "yarn";
 let activeView = "projects";
@@ -1102,6 +1108,7 @@ const els = {
   patternEditMeta: document.querySelector("#patternEditMeta"),
   deletePatternBtn: document.querySelector("#deletePatternBtn"),
   patternName: document.querySelector("#patternName"),
+  patternType: document.querySelector("#patternType"),
   patternSource: document.querySelector("#patternSource"),
   patternNotes: document.querySelector("#patternNotes"),
   patternYarns: document.querySelector("#patternYarns"),
@@ -1116,7 +1123,6 @@ const els = {
   imagePreviewModal: document.querySelector("#imagePreviewModal"),
   closeImagePreviewModal: document.querySelector("#closeImagePreviewModal"),
   imagePreview: document.querySelector("#imagePreview"),
-  cloudinaryStatus: document.querySelector("#cloudinaryStatus"),
   partEditTitle: document.querySelector("#partEditTitle"),
   partEditMeta: document.querySelector("#partEditMeta"),
   deletePartBtn: document.querySelector("#deletePartBtn"),
@@ -1253,6 +1259,8 @@ const els = {
   closeStashActionModal: document.querySelector("#closeStashActionModal"),
   stashActionTitle: document.querySelector("#stashActionTitle"),
   pinStashBtn: document.querySelector("#pinStashBtn"),
+  folderStashBtn: document.querySelector("#folderStashBtn"),
+  removeStashFolderBtn: document.querySelector("#removeStashFolderBtn"),
   shareStashBtn: document.querySelector("#shareStashBtn"),
   deleteStashFromListBtn: document.querySelector("#deleteStashFromListBtn"),
   partActionModal: document.querySelector("#partActionModal"),
@@ -1281,11 +1289,20 @@ const els = {
   closeColorCardStockModal: document.querySelector("#closeColorCardStockModal"),
   colorCardStockBrand: document.querySelector("#colorCardStockBrand"),
   colorCardStockUrl: document.querySelector("#colorCardStockUrl"),
+  colorCardStockSearch: document.querySelector("#colorCardStockSearch"),
   colorCardStockList: document.querySelector("#colorCardStockList"),
   addColorCardStockBtn: document.querySelector("#addColorCardStockBtn"),
   finishToast: document.querySelector("#finishToast"),
   finishToastText: document.querySelector("#finishToastText")
 };
+
+function ensurePatternSortOptions() {
+  if (!els.patternSort || els.patternSort.querySelector("option[value='type-asc']")) return;
+  const nameDesc = els.patternSort.querySelector("option[value='name-desc']");
+  const typeAsc = new Option("類型 A-Z", "type-asc");
+  const typeDesc = new Option("類型 Z-A", "type-desc");
+  nameDesc?.after(typeAsc, typeDesc);
+}
 
 function loadState() {
   try {
@@ -1380,6 +1397,7 @@ function normalizeState(input) {
     brandCards: Array.isArray(input.brandCards) ? input.brandCards : structuredClone(defaultState.brandCards),
     projectTypes: Array.isArray(input.projectTypes) && input.projectTypes.length ? input.projectTypes : structuredClone(defaultState.projectTypes),
     projectFolders: Array.isArray(input.projectFolders) ? input.projectFolders : structuredClone(defaultState.projectFolders),
+    yarnFolders: Array.isArray(input.yarnFolders) ? input.yarnFolders : structuredClone(defaultState.yarnFolders),
     commonGroups: Array.isArray(input.commonGroups) ? input.commonGroups : structuredClone(defaultState.commonGroups),
     tools: Array.isArray(input.tools) ? input.tools : structuredClone(defaultState.tools),
     stitches: Array.isArray(input.stitches) && input.stitches.length ? input.stitches : structuredClone(defaultStitches),
@@ -1400,6 +1418,7 @@ function normalizeState(input) {
     isProjectCopy: Boolean(pattern.isProjectCopy),
     sourcePatternId: pattern.sourcePatternId || "",
     importKey: pattern.importKey || "",
+    type: pattern.type || input.projectTypes?.[0] || defaultState.projectTypes[0] || "作品",
     source: pattern.source || "",
     notes: pattern.notes || "",
     images: Array.isArray(pattern.images) ? pattern.images : [],
@@ -1492,6 +1511,7 @@ function normalizeState(input) {
       unit: yarn.unit || (stockType === "supply" ? "個" : "顆"),
       weight: Number(yarn.weight || 0),
       url: yarn.url || "",
+      folder: yarn.folder || "",
       image: yarn.image || "",
       images: Array.isArray(yarn.images) ? yarn.images : [yarn.image].filter(Boolean),
       supplyColors: Array.isArray(yarn.supplyColors) ? yarn.supplyColors : [],
@@ -1511,6 +1531,11 @@ function normalizeState(input) {
 
   next.projectFolders = next.projectFolders.map((folder) => ({
     name: typeof folder === "string" ? folder : folder.name,
+    pinned: Boolean(folder?.pinned)
+  })).filter((folder) => folder.name);
+  next.yarnFolders = next.yarnFolders.map((folder) => ({
+    name: typeof folder === "string" ? folder : folder.name,
+    stockType: folder?.stockType || "yarn",
     pinned: Boolean(folder?.pinned)
   })).filter((folder) => folder.name);
 
@@ -1941,6 +1966,7 @@ function normalizeProjectSortMode(mode) {
 function normalizePatternSortMode(mode) {
   return ({
     pinned: "pinned-desc",
+    type: "type-asc",
     updated: "updated-desc",
     name: "name-asc"
   })[mode] || mode || "pinned-desc";
@@ -1969,6 +1995,8 @@ function sortedProjects() {
     if (mode === "type-desc") return compareText(a.type, b.type, "desc") || compareText(a.name, b.name);
     if (mode === "updated-desc") return compareDate(a.updatedAt, b.updatedAt) || compareText(a.name, b.name);
     if (mode === "updated-asc") return compareDate(a.updatedAt, b.updatedAt, "asc") || compareText(a.name, b.name);
+    if (mode === "type-asc") return compareText(a.type, b.type) || compareText(a.name, b.name);
+    if (mode === "type-desc") return compareText(a.type, b.type, "desc") || compareText(a.name, b.name);
     if (mode === "name-desc") return compareText(a.name, b.name, "desc");
     if (mode === "pattern-asc") return compareText(projectPatternName(a), projectPatternName(b)) || compareText(a.name, b.name);
     if (mode === "pattern-desc") return compareText(projectPatternName(a), projectPatternName(b), "desc") || compareText(a.name, b.name);
@@ -2061,7 +2089,56 @@ function applyFolderToSelectedProjects(folder) {
 }
 
 function openProjectFolderPicker() {
+  folderPickerMode = "project";
   const folders = projectFolders();
+  els.projectFolderOptions.innerHTML = folders.length
+    ? folders.map((folder) => `<button class="folder-option" data-folder-option="${escapeHtml(folder)}">${escapeHtml(folder)}</button>`).join("")
+    : `<p class="empty-note">目前沒有資料夾。</p>`;
+  els.projectFolderModal.classList.remove("hidden");
+}
+
+function yarnFolderName(yarn) {
+  return (yarn.folder || "").trim();
+}
+
+function yarnFolders() {
+  return Array.from(new Set(state.yarns
+    .filter((yarn) => (yarn.stockType || "yarn") === activeStockType)
+    .map((yarn) => yarnFolderName(yarn))
+    .filter(Boolean))).sort((a, b) => compareText(a, b));
+}
+
+function yarnFolderMeta(name) {
+  let meta = state.yarnFolders.find((folder) => folder.name === name && (folder.stockType || "yarn") === activeStockType);
+  if (!meta) {
+    meta = { name, stockType: activeStockType, pinned: false };
+    state.yarnFolders.push(meta);
+  }
+  return meta;
+}
+
+function yarnFolderRecords() {
+  return yarnFolders().map((name) => {
+    const items = state.yarns.filter((yarn) => (yarn.stockType || "yarn") === activeStockType && yarnFolderName(yarn) === name);
+    return { name, items, pinned: yarnFolderMeta(name).pinned };
+  }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || compareText(a.name, b.name));
+}
+
+function applyFolderToSelectedYarns(folder) {
+  const items = selectedYarnsForAction();
+  if (!items.length) return;
+  items.forEach((item) => {
+    item.folder = folder.trim();
+  });
+  selectedYarnIds.clear();
+  els.stashActionModal.classList.add("hidden");
+  els.projectFolderModal.classList.add("hidden");
+  render();
+}
+
+function openYarnFolderPicker() {
+  folderPickerMode = "yarn";
+  const folders = yarnFolders();
   els.projectFolderOptions.innerHTML = folders.length
     ? folders.map((folder) => `<button class="folder-option" data-folder-option="${escapeHtml(folder)}">${escapeHtml(folder)}</button>`).join("")
     : `<p class="empty-note">目前沒有資料夾。</p>`;
@@ -2088,6 +2165,7 @@ function updateStashActionSheet() {
   const selected = selectedYarnsForAction();
   els.stashActionTitle.textContent = selected.length ? `已選 ${selected.length} 個庫存 · 可繼續點選` : "庫存選項";
   els.pinStashBtn.textContent = selected.length && selected.every((yarn) => yarn.pinned) ? "取消置頂" : "置頂";
+  els.removeStashFolderBtn?.classList.toggle("hidden", !activeYarnFolder);
 }
 
 function uniquePatternName(baseName, currentId = "") {
@@ -2112,6 +2190,12 @@ function warnDuplicateName(name, list, label, getName = (item) => item, currentI
   if (!hasSameName(name, list, getName, currentId)) return false;
   alert(`已經有相同名稱的${label}：「${name}」。請換一個名稱。`);
   return true;
+}
+
+function extractUrl(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/https?:\/\/[^\s"'<>，。、「」『』（）()]+/i);
+  return match ? match[0] : text;
 }
 
 function cleanPatternForShare(pattern) {
@@ -2727,9 +2811,7 @@ function renderTracking() {
   }
   els.writtenPattern.innerHTML = "";
   const currentIndex = progress.currentRound - 1;
-  const visibleRows = rows
-    .map((patternRow, rowIndex) => ({ patternRow, rowIndex }))
-    .filter(({ rowIndex }) => rowIndex >= currentIndex - 1 && rowIndex <= currentIndex + 1);
+  const visibleRows = [{ patternRow: rows[currentIndex], rowIndex: currentIndex }];
   visibleRows.forEach(({ patternRow, rowIndex }) => {
     const line = document.createElement("div");
     line.className = `pattern-line ${rowIndex === currentIndex ? "current-line" : ""} ${rowIndex < progress.completedRounds ? "completed" : ""}`;
@@ -2764,6 +2846,7 @@ function renderTracking() {
 
 function renderPatterns() {
   els.patternList.innerHTML = "";
+  ensurePatternSortOptions();
   els.patternSort.value = normalizePatternSortMode(state.settings.patternSort);
   const patterns = sortedTemplatePatterns();
   if (!patterns.length) {
@@ -2771,14 +2854,13 @@ function renderPatterns() {
     return;
   }
   patterns.forEach((pattern) => {
-    const rows = expandedRows(pattern);
     const card = document.createElement("button");
     card.className = `pattern-library-card ${pattern.pinned ? "pinned-card" : ""} ${selectedPatternIds.has(pattern.id) ? "selected-card" : ""}`;
     card.innerHTML = `
       ${pattern.images[0] ? `<img src="${pattern.images[0]}" alt="">` : `<span class="empty-thumb">圖</span>`}
       <span>
         <strong>${escapeHtml(pattern.name)}</strong>
-        <span class="meta-row"><span>${rows.length} 段</span>${pattern.notes ? `<span>${escapeHtml(pattern.notes)}</span>` : ""}</span>
+        <span class="meta-row"><span class="pill">${escapeHtml(pattern.type || "作品")}</span><span>${pattern.parts.length} 個部分</span>${pattern.notes ? `<span>${escapeHtml(pattern.notes)}</span>` : ""}</span>
       </span>
     `;
     let timer = null;
@@ -2827,6 +2909,9 @@ function renderPatternEditor() {
   els.patternEditTitle.textContent = pattern.name;
   els.patternEditMeta.textContent = `共 ${expandedRows(pattern).length} 段`;
   els.patternName.value = pattern.name;
+  els.patternType.innerHTML = state.projectTypes.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
+  if (!state.projectTypes.includes(pattern.type)) pattern.type = state.projectTypes[0] || "作品";
+  els.patternType.value = pattern.type;
   els.patternSource.value = pattern.source;
   els.patternNotes.value = pattern.notes || "";
   renderMultiSelect(els.patternYarns, state.yarns.filter((yarn) => (yarn.stockType || "yarn") === "yarn").map((yarn) => ({ value: yarn.id, label: stockLabel(yarn) })), pattern.yarnIds || [], (values) => { pattern.yarnIds = values; pattern.updatedAt = new Date().toISOString(); saveState(); }, "搜尋線材");
@@ -2851,7 +2936,7 @@ function renderPatternEditor() {
         <strong>${escapeHtml(part.name)}</strong>
         <span>${escapeHtml(formatRoundRange(part.segments.reduce((sum, segment) => sum + Number(segment.repeat || 1), 0)))}</span>
       </span>
-      ${part.notes ? `<span class="muted">${escapeHtml(part.notes)}</span>` : ""}
+      <span class="muted">${escapeHtml(summarizeItems(part.segments.flatMap((segment) => segment.items || [])) || "尚無針法")}</span>
     `;
     let longPressTimer = null;
     let didLongPress = false;
@@ -3040,7 +3125,68 @@ function renderStash() {
     els.stashList.innerHTML = `<p class="empty-note">尚無${activeStockType === "yarn" ? "線材" : "消耗品"}。</p>`;
     return;
   }
-  visibleYarns.forEach((yarn) => {
+  if (!activeYarnFolder) {
+    renderYarnFolders();
+    visibleYarns.filter((yarn) => !yarnFolderName(yarn)).forEach((yarn) => renderYarnCard(yarn));
+    return;
+  }
+  const back = document.createElement("button");
+  back.className = "folder-back-button";
+  back.textContent = `← ${activeYarnFolder}`;
+  back.addEventListener("click", () => {
+    activeYarnFolder = null;
+    selectedYarnIds.clear();
+    renderStash();
+  });
+  els.stashList.append(back);
+  const folderYarns = visibleYarns.filter((yarn) => yarnFolderName(yarn) === activeYarnFolder);
+  if (!folderYarns.length) {
+    els.stashList.insertAdjacentHTML("beforeend", `<p class="empty-note">這個資料夾目前沒有庫存。</p>`);
+    return;
+  }
+  folderYarns.forEach((yarn) => renderYarnCard(yarn));
+}
+
+function renderYarnFolders() {
+  yarnFolderRecords().forEach((folder) => {
+    const card = document.createElement("button");
+    const images = folder.items.map((item) => item.image).filter(Boolean).slice(0, 4);
+    card.className = `project-card folder-card ${folder.pinned ? "pinned-card" : ""}`;
+    card.innerHTML = `
+      <span class="folder-collage ${images.length ? "" : "empty-thumb"}">
+        ${images.length ? images.map((src) => `<img src="${src}" alt="">`).join("") : "資料夾"}
+      </span>
+      <span>
+        <span class="card-title-row"><strong>${escapeHtml(folder.name)}</strong>${folder.pinned ? "<strong>置頂</strong>" : ""}</span>
+        <span class="meta-row"><span>${folder.items.length} 個庫存</span></span>
+      </span>
+    `;
+    let timer = null;
+    let longPressed = false;
+    card.addEventListener("pointerdown", () => {
+      longPressed = false;
+      timer = window.setTimeout(() => {
+        longPressed = true;
+        actionYarnFolderName = folder.name;
+        const meta = yarnFolderMeta(folder.name);
+        els.folderActionTitle.textContent = folder.name;
+        els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
+        els.folderActionModal.classList.remove("hidden");
+      }, 550);
+    });
+    card.addEventListener("pointerup", () => window.clearTimeout(timer));
+    card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+    card.addEventListener("click", () => {
+      if (longPressed) return;
+      activeYarnFolder = folder.name;
+      selectedYarnIds.clear();
+      renderStash();
+    });
+    els.stashList.append(card);
+  });
+}
+
+function renderYarnCard(yarn) {
     const card = document.createElement("button");
     card.className = `yarn-card ${yarn.pinned ? "pinned-card" : ""} ${selectedYarnIds.has(yarn.id) ? "selected-card" : ""}`;
     const usageText = `<span>使用 ${stockUsageCount(yarn.id)} 次</span>`;
@@ -3091,7 +3237,6 @@ function renderStash() {
       switchView("yarnEdit");
     });
     els.stashList.append(card);
-  });
 }
 
 function renderYarnForm() {
@@ -3140,20 +3285,18 @@ function renderYarnForm() {
 function renderSettings() {
   const settingsView = document.querySelector("#settingsView");
   const displaySection = els.displayMode.closest(".settings-card");
-  const cloudinarySection = els.cloudinaryStatus?.closest(".settings-card");
   const toolSection = els.toolList.closest(".settings-card");
   const brandSection = els.brandList.closest(".settings-card");
   const projectTypeSection = els.projectTypeList.closest(".settings-card");
   const commonGroupSection = els.commonGroupList.closest(".settings-card");
   const stitchSection = els.stitchEditorList.closest(".settings-card");
   const resetSection = els.resetDataBtn.closest(".settings-card");
-  [displaySection, cloudinarySection, toolSection, brandSection, projectTypeSection, commonGroupSection, stitchSection, resetSection].filter(Boolean).forEach((section) => settingsView.append(section));
+  [displaySection, toolSection, brandSection, projectTypeSection, commonGroupSection, stitchSection, resetSection].filter(Boolean).forEach((section) => settingsView.append(section));
 
   if (state.settings.displayMode === "abbr") state.settings.displayMode = "letter";
   els.displayMode.value = state.settings.displayMode;
   els.roundLabelMode.value = state.settings.roundLabelMode;
   if (els.themeColor) els.themeColor.value = state.settings.themeColor || "rose";
-  updateCloudinaryStatus();
   const displayLabel = displaySection.querySelector("label");
   const displaySelect = displayLabel.querySelector("select");
   displayLabel.innerHTML = "針法顯示";
@@ -3437,16 +3580,21 @@ function renderColorCardStockPicker() {
   const brand = cards.some((card) => card.brand === selectedBrand) ? selectedBrand : cards[0]?.brand || "";
   if (brand) els.colorCardStockBrand.value = brand;
   const card = state.brandCards.find((item) => item.brand === brand);
-  els.colorCardStockList.innerHTML = card?.colors?.length ? card.colors.map((color) => `
+  const keyword = (els.colorCardStockSearch?.value || "").trim().toLowerCase();
+  const colors = (card?.colors || []).filter((color) => {
+    if (!keyword) return true;
+    return `${color.lot || ""} ${color.colorName || ""}`.toLowerCase().includes(keyword);
+  });
+  els.colorCardStockList.innerHTML = colors.length ? colors.map((color) => `
     <label class="color-card-choice">
-      <input type="checkbox" value="${color.id}">
+      <input type="checkbox" value="${color.id}" ${selectedColorCardStockIds.has(color.id) ? "checked" : ""}>
       ${color.image ? `<img src="${color.image}" alt="">` : `<span class="empty-thumb">圖</span>`}
       <span>
         <strong>${escapeHtml(color.colorName || "未命名顏色")}</strong>
         <small>${escapeHtml(color.lot || "無色號")}</small>
       </span>
     </label>
-  `).join("") : `<p class="empty-note">這個品牌尚未建立色卡。</p>`;
+  `).join("") : `<p class="empty-note">${card?.colors?.length ? "沒有符合的色卡。" : "這個品牌尚未建立色卡。"}</p>`;
 }
 
 function openColorCardStockPicker() {
@@ -3456,6 +3604,8 @@ function openColorCardStockPicker() {
     return;
   }
   els.colorCardStockUrl.value = "";
+  if (els.colorCardStockSearch) els.colorCardStockSearch.value = "";
+  selectedColorCardStockIds.clear();
   renderColorCardStockPicker();
   els.colorCardStockModal.classList.remove("hidden");
 }
@@ -3921,7 +4071,7 @@ function openPatternPicker(onSelect) {
     patterns.forEach((pattern) => {
     const button = document.createElement("button");
     button.className = "pattern-library-card";
-    button.innerHTML = `<span class="empty-thumb">Aa</span><span><strong>${escapeHtml(pattern.name)}</strong><span class="meta-row">${expandedRows(pattern).length} 段</span></span>`;
+    button.innerHTML = `<span class="empty-thumb">Aa</span><span><strong>${escapeHtml(pattern.name)}</strong><span class="meta-row">${pattern.parts.length} 個部分</span></span>`;
     button.addEventListener("click", () => onSelect(pattern.id));
     els.attachPatternOptions.append(button);
     });
@@ -4040,20 +4190,32 @@ els.closeProjectFolderModal.addEventListener("click", () => els.projectFolderMod
 els.projectFolderOptions.addEventListener("click", (event) => {
   const folder = event.target.closest("[data-folder-option]")?.dataset.folderOption;
   if (!folder) return;
-  applyFolderToSelectedProjects(folder);
+  if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
+  else applyFolderToSelectedProjects(folder);
 });
 els.newProjectFolderBtn.addEventListener("click", () => {
   const folder = prompt("新增資料夾名稱");
   if (folder === null) return;
   if (!folder.trim()) return;
-  if (warnDuplicateName(folder.trim(), projectFolders(), "資料夾")) return;
-  applyFolderToSelectedProjects(folder);
+  const folders = folderPickerMode === "yarn" ? yarnFolders() : projectFolders();
+  if (warnDuplicateName(folder.trim(), folders, "資料夾")) return;
+  if (folderPickerMode === "yarn") applyFolderToSelectedYarns(folder);
+  else applyFolderToSelectedProjects(folder);
 });
 els.closeFolderActionModal.addEventListener("click", () => {
   actionFolderName = "";
+  actionYarnFolderName = "";
   els.folderActionModal.classList.add("hidden");
 });
 els.pinFolderBtn.addEventListener("click", () => {
+  if (actionYarnFolderName) {
+    const meta = yarnFolderMeta(actionYarnFolderName);
+    meta.pinned = !meta.pinned;
+    actionYarnFolderName = "";
+    els.folderActionModal.classList.add("hidden");
+    render();
+    return;
+  }
   if (!actionFolderName) return;
   const meta = folderMeta(actionFolderName);
   meta.pinned = !meta.pinned;
@@ -4062,6 +4224,18 @@ els.pinFolderBtn.addEventListener("click", () => {
   render();
 });
 els.deleteFolderBtn.addEventListener("click", () => {
+  if (actionYarnFolderName) {
+    const count = state.yarns.filter((yarn) => (yarn.stockType || "yarn") === activeStockType && yarnFolderName(yarn) === actionYarnFolderName).length;
+    if (!confirm(`確定要刪除「${actionYarnFolderName}」資料夾與裡面的 ${count} 個庫存嗎？`)) return;
+    state.yarns = state.yarns.filter((yarn) => (yarn.stockType || "yarn") !== activeStockType || yarnFolderName(yarn) !== actionYarnFolderName);
+    state.yarnFolders = state.yarnFolders.filter((folder) => folder.name !== actionYarnFolderName || (folder.stockType || "yarn") !== activeStockType);
+    if (activeYarnFolder === actionYarnFolderName) activeYarnFolder = null;
+    selectedYarnId = state.yarns[0]?.id || null;
+    actionYarnFolderName = "";
+    els.folderActionModal.classList.add("hidden");
+    render();
+    return;
+  }
   if (!actionFolderName) return;
   const count = state.projects.filter((project) => projectFolderName(project) === actionFolderName).length;
   if (!confirm(`確定要刪除「${actionFolderName}」資料夾與裡面的 ${count} 個作品嗎？`)) return;
@@ -4166,6 +4340,7 @@ els.newPatternBtn.addEventListener("click", () => {
     const pattern = {
       id: crypto.randomUUID(),
       name: uniquePatternName(baseName),
+      type: state.projectTypes[0] || "作品",
       source: "",
       notes: "",
       images: [],
@@ -4292,6 +4467,7 @@ els.convertTextPatternBtn.addEventListener("click", () => {
   const pattern = {
     id: crypto.randomUUID(),
     name,
+    type: state.projectTypes[0] || "作品",
     source: "",
     notes: "",
     images: [],
@@ -4343,7 +4519,10 @@ els.patternName.addEventListener("blur", () => {
   pattern.name = uniquePatternName(pattern.name, pattern.id);
   render();
 });
+els.patternType.addEventListener("change", () => { const pattern = editablePattern(); pattern.type = els.patternType.value; pattern.updatedAt = new Date().toISOString(); saveState(); });
 els.patternSource.addEventListener("input", () => { const pattern = editablePattern(); pattern.source = els.patternSource.value; pattern.updatedAt = new Date().toISOString(); saveState(); });
+els.patternSource.addEventListener("paste", () => { window.setTimeout(() => { els.patternSource.value = extractUrl(els.patternSource.value); const pattern = editablePattern(); pattern.source = els.patternSource.value; pattern.updatedAt = new Date().toISOString(); saveState(); }); });
+els.patternSource.addEventListener("blur", () => { const pattern = editablePattern(); pattern.source = extractUrl(els.patternSource.value); pattern.updatedAt = new Date().toISOString(); render(); });
 els.patternNotes.addEventListener("input", () => { const pattern = editablePattern(); pattern.notes = els.patternNotes.value; pattern.updatedAt = new Date().toISOString(); saveState(); });
 els.patternSupplyUsageList.addEventListener("input", (event) => {
   const id = event.target.dataset.patternSupplyUsage;
@@ -4541,7 +4720,7 @@ els.patternImages.addEventListener("click", (event) => {
 function createStockItem(stockType = activeStockType, patch = {}) {
   const name = patch.colorName || nextStockName(stockType);
   if (warnDuplicateName(name, state.yarns.filter((item) => (item.stockType || "yarn") === stockType), stockType === "supply" ? "消耗品" : "線材", (item) => item.colorName)) return null;
-  const yarn = { id: crypto.randomUUID(), stockType, colorName: nextStockName(stockType), brand: DEFAULT_BRAND, lot: "", amount: 1, unit: stockType === "supply" ? "個" : "顆", weight: 0, url: "", image: "", images: [], supplyColors: [], notes: "", ...patch };
+  const yarn = { id: crypto.randomUUID(), stockType, colorName: nextStockName(stockType), brand: DEFAULT_BRAND, lot: "", amount: 1, unit: stockType === "supply" ? "個" : "顆", weight: 0, url: "", image: "", images: [], supplyColors: [], folder: activeYarnFolder || "", notes: "", ...patch };
   state.yarns.unshift(yarn);
   selectedYarnId = yarn.id;
   return yarn;
@@ -4550,17 +4729,23 @@ function createStockItem(stockType = activeStockType, patch = {}) {
 els.colorCardYarnBtn?.addEventListener("click", openColorCardStockPicker);
 els.closeColorCardStockModal.addEventListener("click", () => els.colorCardStockModal.classList.add("hidden"));
 els.colorCardStockBrand.addEventListener("change", renderColorCardStockPicker);
+els.colorCardStockSearch?.addEventListener("input", renderColorCardStockPicker);
+els.colorCardStockList.addEventListener("change", (event) => {
+  if (!event.target.matches("input[type='checkbox']")) return;
+  if (event.target.checked) selectedColorCardStockIds.add(event.target.value);
+  else selectedColorCardStockIds.delete(event.target.value);
+});
 els.addColorCardStockBtn.addEventListener("click", () => {
   const brand = els.colorCardStockBrand.value;
   const card = state.brandCards.find((item) => item.brand === brand);
   if (!card) return;
-  const ids = new Set(Array.from(els.colorCardStockList.querySelectorAll("input[type='checkbox']:checked")).map((input) => input.value));
+  const ids = selectedColorCardStockIds;
   if (!ids.size) {
     alert("請先選擇至少一個顏色。");
     return;
   }
   const created = [];
-  const url = els.colorCardStockUrl.value.trim();
+  const url = extractUrl(els.colorCardStockUrl.value);
   if (!url) {
     alert("請先填寫購買連結。");
     return;
@@ -4581,6 +4766,7 @@ els.addColorCardStockBtn.addEventListener("click", () => {
   if (!created.length) return;
   activeStockType = "yarn";
   selectedYarnId = created[0].id;
+  selectedColorCardStockIds.clear();
   els.colorCardStockModal.classList.add("hidden");
   switchView("stash");
 });
@@ -4651,7 +4837,7 @@ els.saveBulkStockBtn.addEventListener("click", () => {
     lot: stockType === "yarn" ? row.lot : "",
     brand: els.bulkStockBrand.value || DEFAULT_BRAND,
     weight: Number(els.bulkStockWeight.value || 0),
-    url: els.bulkStockUrl.value.trim(),
+    url: extractUrl(els.bulkStockUrl.value),
     amount: stockType === "supply" ? 0 : 1,
     unit: stockType === "supply" ? "個" : "顆"
   }));
@@ -4663,6 +4849,8 @@ els.stockTypeTabs.addEventListener("click", (event) => {
   const type = event.target.closest("[data-stock-type]")?.dataset.stockType;
   if (!type) return;
   activeStockType = type;
+  activeYarnFolder = null;
+  selectedYarnIds.clear();
   render();
 });
 els.yarnImageInput.addEventListener("change", () => readImages(els.yarnImageInput.files, addYarnImage));
@@ -4691,6 +4879,18 @@ els.yarnAmount.addEventListener("input", () => { const yarn = state.yarns.find((
 els.yarnUnit.addEventListener("input", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.unit = els.yarnUnit.value.trim() || "個"; saveState(); });
 els.yarnWeight.addEventListener("input", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.weight = Number(els.yarnWeight.value); saveState(); });
 els.yarnUrl.addEventListener("input", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.url = els.yarnUrl.value; saveState(); });
+els.yarnUrl.addEventListener("paste", () => { window.setTimeout(() => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) { els.yarnUrl.value = extractUrl(els.yarnUrl.value); yarn.url = els.yarnUrl.value; saveState(); } }); });
+els.yarnUrl.addEventListener("blur", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) { yarn.url = extractUrl(els.yarnUrl.value); render(); } });
+[els.colorCardStockUrl, els.bulkStockUrl, els.newToolUrl, els.editToolUrl].forEach((input) => {
+  input?.addEventListener("paste", () => {
+    window.setTimeout(() => {
+      input.value = extractUrl(input.value);
+    });
+  });
+  input?.addEventListener("blur", () => {
+    input.value = extractUrl(input.value);
+  });
+});
 els.yarnNotes.addEventListener("input", () => { const yarn = state.yarns.find((item) => item.id === selectedYarnId); if (yarn) yarn.notes = els.yarnNotes.value; saveState(); });
 els.addSupplyColorBtn.addEventListener("click", () => {
   const yarn = state.yarns.find((item) => item.id === selectedYarnId);
@@ -4744,6 +4944,21 @@ els.pinStashBtn.addEventListener("click", () => {
   const shouldPin = items.some((item) => !item.pinned);
   items.forEach((item) => {
     item.pinned = shouldPin;
+  });
+  selectedYarnIds.clear();
+  els.stashActionModal.classList.add("hidden");
+  render();
+});
+els.folderStashBtn?.addEventListener("click", () => {
+  const items = selectedYarnsForAction();
+  if (!items.length) return;
+  openYarnFolderPicker();
+});
+els.removeStashFolderBtn?.addEventListener("click", () => {
+  const items = selectedYarnsForAction();
+  if (!items.length) return;
+  items.forEach((item) => {
+    item.folder = "";
   });
   selectedYarnIds.clear();
   els.stashActionModal.classList.add("hidden");
@@ -4965,6 +5180,9 @@ els.projectTypeList.addEventListener("input", (event) => {
   state.projects.forEach((project) => {
     if (project.type === oldType) project.type = nextType;
   });
+  state.patterns.forEach((pattern) => {
+    if (pattern.type === oldType) pattern.type = nextType;
+  });
   saveState();
 });
 els.projectTypeList.addEventListener("click", (event) => {
@@ -4976,6 +5194,9 @@ els.projectTypeList.addEventListener("click", (event) => {
     const fallback = state.projectTypes[0] || "作品";
     state.projects.forEach((project) => {
       if (project.type === removed) project.type = fallback;
+    });
+    state.patterns.forEach((pattern) => {
+      if (pattern.type === removed) pattern.type = fallback;
     });
     render();
   });
@@ -5105,7 +5326,7 @@ els.addToolBtn.addEventListener("click", () => {
   const name = els.newToolName.value.trim();
   if (!name) return;
   if (warnDuplicateName(name, state.tools, "工具", (tool) => tool.name)) return;
-  state.tools.push({ id: crypto.randomUUID(), name, brand: els.newToolBrand.value.trim(), url: els.newToolUrl.value.trim() });
+  state.tools.push({ id: crypto.randomUUID(), name, brand: els.newToolBrand.value.trim(), url: extractUrl(els.newToolUrl.value) });
   els.newToolName.value = "";
   els.newToolBrand.value = "";
   els.newToolUrl.value = "";
@@ -5125,6 +5346,12 @@ els.editToolUrl.addEventListener("input", () => {
   const tool = state.tools.find((item) => item.id === selectedToolId);
   if (tool) tool.url = els.editToolUrl.value;
   render();
+});
+els.editToolUrl.addEventListener("blur", () => {
+  const tool = state.tools.find((item) => item.id === selectedToolId);
+  if (!tool) return;
+  tool.url = extractUrl(els.editToolUrl.value);
+  renderSettings();
 });
 els.deleteToolBtn.addEventListener("click", () => {
   state.tools = state.tools.filter((tool) => tool.id !== selectedToolId);

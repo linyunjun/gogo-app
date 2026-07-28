@@ -182,6 +182,10 @@
               <input id="patternName" />
             </label>
             <label>
+              織圖類型
+              <select id="patternType"></select>
+            </label>
+            <label>
               參考連結
               <input id="patternSource" />
             </label>
@@ -353,12 +357,6 @@
                 <option value="charcoal">石墨灰</option>
               </select>
             </label>
-          </details>
-
-          <details class="settings-card settings-details">
-            <summary>圖片雲端</summary>
-            <p class="muted">新增圖片會自動上傳到共用圖片雲端，APP 只保存圖片網址。</p>
-            <p class="muted" id="cloudinaryStatus">尚未設定圖片雲端。</p>
           </details>
 
           <details class="settings-card settings-details">
@@ -616,6 +614,7 @@
             購買連結
             <input id="colorCardStockUrl" type="url" placeholder="https://..." />
           </label>
+          <input class="modal-search" id="colorCardStockSearch" placeholder="搜尋色號或顏色" />
           <div class="color-card-select-list" id="colorCardStockList"></div>
           <button class="primary-button full-width" id="addColorCardStockBtn">加入庫存</button>
         </div>
@@ -629,6 +628,8 @@
           </div>
           <div class="button-row modal-actions">
             <button class="outline-button" id="pinStashBtn">置頂</button>
+            <button class="outline-button" id="folderStashBtn">加入資料夾</button>
+            <button class="outline-button hidden" id="removeStashFolderBtn">移出資料夾</button>
             <button class="outline-button" id="shareStashBtn">分享</button>
             <button class="danger-button" id="deleteStashFromListBtn">刪除</button>
           </div>
