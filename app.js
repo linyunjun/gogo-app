@@ -1894,6 +1894,13 @@ function stockLabel(item) {
   return item.brand && item.brand !== DEFAULT_BRAND ? `${item.brand} · ${item.colorName}` : item.colorName;
 }
 
+function stockLabel(item) {
+  if ((item.stockType || "yarn") === "supply") return item.colorName;
+  return [item.brand && item.brand !== DEFAULT_BRAND ? item.brand : "", item.lot || "", item.colorName || ""]
+    .filter(Boolean)
+    .join("・");
+}
+
 function stockUsageCount(stockId) {
   const patternUses = state.patterns.filter((pattern) => (pattern.yarnIds || []).includes(stockId) || (pattern.supplyIds || []).includes(stockId)).length;
   const projectUses = state.projects.filter((project) => (project.yarnIds || []).includes(stockId) || (project.supplyIds || []).includes(stockId)).length;
@@ -3583,7 +3590,7 @@ function renderColorCardStockPicker() {
   const keyword = (els.colorCardStockSearch?.value || "").trim().toLowerCase();
   const colors = (card?.colors || []).filter((color) => {
     if (!keyword) return true;
-    return `${color.lot || ""} ${color.colorName || ""}`.toLowerCase().includes(keyword);
+    return `${brand || ""} ${color.lot || ""} ${color.colorName || ""}`.toLowerCase().includes(keyword);
   });
   els.colorCardStockList.innerHTML = colors.length ? colors.map((color) => `
     <label class="color-card-choice">
@@ -3591,7 +3598,7 @@ function renderColorCardStockPicker() {
       ${color.image ? `<img src="${color.image}" alt="">` : `<span class="empty-thumb">圖</span>`}
       <span>
         <strong>${escapeHtml(color.colorName || "未命名顏色")}</strong>
-        <small>${escapeHtml(color.lot || "無色號")}</small>
+        <small>${escapeHtml([brand, color.lot || "無色號"].filter(Boolean).join("・"))}</small>
       </span>
     </label>
   `).join("") : `<p class="empty-note">${card?.colors?.length ? "沒有符合的色卡。" : "這個品牌尚未建立色卡。"}</p>`;
