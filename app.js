@@ -2460,6 +2460,87 @@ function restoreFullBackup(payload) {
   switchView("projects");
 }
 
+function patternCloudShareUrl(dataUrl) {
+  const url = new URL(location.href);
+  url.hash = "";
+  url.searchParams.set("importPatternUrl", dataUrl);
+  return url.toString();
+}
+
+function extractPatternImportUrl(text) {
+  const value = String(text || "").trim();
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    const embedded = url.searchParams.get("importPatternUrl") || url.searchParams.get("patternUrl");
+    if (embedded) return embedded;
+    if (url.hostname.includes("res.cloudinary.com")) return url.toString();
+  } catch {}
+  return "";
+}
+
+async function readPatternImportText(textOrUrl) {
+  const importUrl = extractPatternImportUrl(textOrUrl);
+  if (!importUrl) return normalizeClipboardJsonText(textOrUrl);
+  const response = await fetch(importUrl);
+  if (!response.ok) throw new Error("無法下載織圖資料");
+  return normalizeClipboardJsonText(await response.text());
+}
+
+function finishImportedPatterns(imported) {
+  selectedPatternId = imported[0]?.id || selectedPatternId;
+  if (imported.length === 1) {
+    switchView("patternEdit");
+    alert("已匯入織圖。");
+    return;
+  }
+  switchView("patterns");
+  alert(`已匯入 ${imported.length} 個織圖。`);
+}
+
+async function copyFullPatternData(patterns) {
+  const payload = patterns.length > 1 ? patternBundlePackage(patterns) : patternSharePackage(patterns[0]);
+  const text = JSON.stringify(payload, null, 2);
+  const filename = patterns.length > 1 ? `${patterns.length}-patterns.txt` : `${patterns[0]?.name || "gogo-pattern"}.txt`;
+  try {
+    const dataUrl = await uploadTextToCloudinary(text, filename);
+    const shareUrl = patternCloudShareUrl(dataUrl);
+    await navigator.clipboard.writeText(shareUrl);
+    alert(patterns.length > 1 ? `已複製 ${patterns.length} 個織圖分享連結，內容已包含圖片。` : "已複製織圖分享連結，內容已包含圖片。");
+  } catch (error) {
+    alert(`織圖分享連結建立失敗：${error.message || "請稍後再試"}`);
+  }
+}
+
+async function importFullPatternText(textOrUrl) {
+  const text = await readPatternImportText(textOrUrl);
+  const imported = importPatternPayload(JSON.parse(text));
+  finishImportedPatterns(imported);
+}
+
+async function importFullPatternFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    await importFullPatternText(text);
+  } catch (error) {
+    alert(`剪貼簿內容不是可匯入的織圖資料：${error.message || "請確認分享連結或資料內容"}`);
+  }
+}
+
+async function checkSharedPatternImportUrl() {
+  const importUrl = new URLSearchParams(location.search).get("importPatternUrl");
+  if (!importUrl) return;
+  try {
+    if (confirm("偵測到分享織圖連結，要匯入到自己的織圖庫嗎？")) {
+      await importFullPatternText(importUrl);
+    }
+  } catch (error) {
+    alert(`分享織圖連結無法匯入：${error.message || "請確認連結是否正確"}`);
+  } finally {
+    history.replaceState(null, "", location.pathname + location.hash);
+  }
+}
+
 async function sharePattern(pattern) {
   const payload = patternSharePackage(pattern);
   const shareUrl = `${location.origin}${location.pathname}#pattern=${encodeSharePayload(payload)}`;
@@ -4032,6 +4113,26 @@ async function uploadImageToCloudinary(dataUrl) {
   return result.secure_url;
 }
 
+async function uploadTextToCloudinary(text, filename = "gogo-pattern.txt") {
+  const config = cloudinaryConfig();
+  if (!config.cloudName || !config.uploadPreset) throw new Error("Cloudinary is not configured");
+  const body = new FormData();
+  const safeFilename = `${String(filename || "gogo-pattern.txt").replace(/[\\/:*?"<>|]+/g, "-").replace(/\.txt$/i, "")}.txt`;
+  const file = new Blob([text], { type: "text/plain;charset=utf-8" });
+  body.append("file", file, safeFilename);
+  body.append("upload_preset", config.uploadPreset);
+  if (config.folder) body.append("folder", `${config.folder}/patterns`);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/auto/upload`, {
+    method: "POST",
+    body
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.secure_url) {
+    throw new Error(result.error?.message || "Pattern data upload failed");
+  }
+  return result.secure_url;
+}
+
 function readImages(files, callback) {
   Array.from(files || []).forEach(async (file) => {
     const src = await compressImageFile(file);
@@ -4479,14 +4580,16 @@ els.sharePatternBtn.addEventListener("click", async () => {
   const patterns = selectedPatternsForAction();
   if (!patterns.length) return;
   els.patternActionModal.classList.add("hidden");
-  els.patternShareModal.classList.remove("hidden");
+  selectedPatternIds.clear();
+  await copyFullPatternData(patterns);
+  renderPatterns();
 });
 els.sharePatternTextBtn.addEventListener("click", async () => {
   const patterns = selectedPatternsForAction();
   if (!patterns.length) return;
   els.patternShareModal.classList.add("hidden");
   selectedPatternIds.clear();
-  await copyPatternText(patterns);
+  await copyFullPatternData(patterns);
   renderPatterns();
 });
 els.sharePatternFullBtn.addEventListener("click", async () => {
@@ -5707,5 +5810,6 @@ requestAnimationFrame(() => {
   document.querySelector(".workspace")?.scrollTo({ top: 0 });
 });
 render();
+checkSharedPatternImportUrl();
 checkSharedPatternFromUrl();
 checkSharedStashFromUrl();
