@@ -3011,7 +3011,7 @@ function renderPartEditor() {
     const card = document.createElement("article");
     card.className = `segment-card ${isEditing ? "editing-segment-card" : ""}`;
     card.dataset.segmentId = segment.id;
-    const summaryText = segment.note || summarizeItems(segment.items || []) || "尚無針法";
+    const summaryText = summarizeItems(segment.items || []) || "尚無針法";
     card.innerHTML = isEditing ? `
       <div class="segment-edit-layout">
         <span class="drag-handle segment-drag-handle" draggable="true" data-segment-drag="${segment.id}">☰</span>
