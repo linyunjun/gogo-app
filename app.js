@@ -3045,6 +3045,7 @@ function renderPartEditor() {
             <span class="drag-hint">長按複製/刪除</span>
           </span>
           <span class="segment-summary">${escapeHtml(summaryText)}</span>
+          ${segment.note ? `<span class="segment-summary-note">${escapeHtml(segment.note)}</span>` : ""}
         </span>
       </div>
     `;
