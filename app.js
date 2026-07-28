@@ -14,6 +14,7 @@ const CLOUDINARY_CONFIG = {
   folder: "gogo_app"
 };
 const LONG_PRESS_MS = 750;
+const LONG_PRESS_MOVE_TOLERANCE = 12;
 const IMAGE_MAX_SIZE = 900;
 const IMAGE_QUALITY = 0.72;
 let storageWarningShown = false;
@@ -2286,6 +2287,14 @@ function importPatternPayload(payload) {
   return [importPatternPackage(payload)];
 }
 
+function normalizeClipboardJsonText(text) {
+  return String(text || "")
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
 function patternItemsToText(items = []) {
   return items.map(compactItemDisplay).join(",");
 }
@@ -2356,7 +2365,7 @@ async function importFullPatternFromClipboard() {
     return;
   }
   try {
-    const imported = importPatternPayload(JSON.parse(text));
+    const imported = importPatternPayload(JSON.parse(normalizeClipboardJsonText(text)));
     selectedPatternId = imported[0]?.id || selectedPatternId;
     if (imported.length === 1) {
       switchView("patternEdit");
@@ -2649,9 +2658,9 @@ function renderProjectCard(project) {
   `;
   let timer = null;
   let longPressed = false;
-  card.addEventListener("pointerdown", () => {
+  card.addEventListener("pointerdown", (event) => {
     longPressed = false;
-    timer = window.setTimeout(() => {
+    timer = startLongPress(event, () => {
       longPressed = true;
       suppressNextSelectionClickUntil = Date.now() + 700;
       selectedProjectIds.add(project.id);
@@ -2659,10 +2668,10 @@ function renderProjectCard(project) {
       updateProjectActionSheet();
       els.projectActionModal.classList.remove("hidden");
       renderProjects();
-    }, LONG_PRESS_MS);
+    });
   });
-  card.addEventListener("pointerup", () => window.clearTimeout(timer));
-  card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+  card.addEventListener("pointerup", () => timer?.());
+  card.addEventListener("pointerleave", () => timer?.());
   card.addEventListener("click", () => {
     if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
     if (selectedProjectIds.size) {
@@ -2808,15 +2817,7 @@ function renderTracking() {
   els.totalStitches.textContent = stitches.length;
 
   els.legendList.innerHTML = state.stitches.map((stitch) => `<div><strong>${escapeHtml(stitch.zh)}</strong><span>${escapeHtml(displayStitch(stitch.id))}</span></div>`).join("");
-  if (els.partProgressList && project) {
-    els.partProgressList.innerHTML = partProgressList(project, pattern).map(({ part, percent, done, total }) => `
-      <div class="part-progress-chip">
-        <span>${escapeHtml(part.name)}</span>
-        <strong>${percent}%</strong>
-        <small>${done}/${total}</small>
-      </div>
-    `).join("");
-  }
+  if (els.partProgressList) els.partProgressList.innerHTML = "";
   els.writtenPattern.innerHTML = "";
   const currentIndex = progress.currentRound - 1;
   const visibleRows = [{ patternRow: rows[currentIndex], rowIndex: currentIndex }];
@@ -2873,9 +2874,9 @@ function renderPatterns() {
     `;
     let timer = null;
     let longPressed = false;
-    card.addEventListener("pointerdown", () => {
+    card.addEventListener("pointerdown", (event) => {
       longPressed = false;
-      timer = window.setTimeout(() => {
+      timer = startLongPress(event, () => {
       longPressed = true;
       suppressNextSelectionClickUntil = Date.now() + 700;
       selectedPatternIds.add(pattern.id);
@@ -2883,10 +2884,10 @@ function renderPatterns() {
         updatePatternActionSheet();
         els.patternActionModal.classList.remove("hidden");
         renderPatterns();
-      }, LONG_PRESS_MS);
+      });
     });
-    card.addEventListener("pointerup", () => window.clearTimeout(timer));
-  card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+    card.addEventListener("pointerup", () => timer?.());
+  card.addEventListener("pointerleave", () => timer?.());
   card.addEventListener("click", () => {
       if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
       if (selectedPatternIds.size) {
@@ -2948,22 +2949,18 @@ function renderPatternEditor() {
     `;
     let longPressTimer = null;
     let didLongPress = false;
-    section.addEventListener("pointerdown", () => {
+    section.addEventListener("pointerdown", (event) => {
       didLongPress = false;
-      longPressTimer = window.setTimeout(() => {
+      longPressTimer = startLongPress(event, () => {
         didLongPress = true;
         actionPartId = part.id;
         els.partActionTitle.textContent = part.name;
         els.partCopyCount.value = 1;
         els.partActionModal.classList.remove("hidden");
-      }, LONG_PRESS_MS);
+      });
     });
-    section.addEventListener("pointerup", () => {
-      window.clearTimeout(longPressTimer);
-    });
-    section.addEventListener("pointerleave", () => {
-      window.clearTimeout(longPressTimer);
-    });
+    section.addEventListener("pointerup", () => longPressTimer?.());
+    section.addEventListener("pointerleave", () => longPressTimer?.());
     section.addEventListener("click", () => {
       if (didLongPress) return;
       selectedPartId = part.id;
@@ -3055,15 +3052,15 @@ function renderPartEditor() {
       if (isEditing) return;
       if (event.target.closest("input, select, button, [data-segment-drag]")) return;
       didLongPress = false;
-      longPressTimer = window.setTimeout(() => {
+      longPressTimer = startLongPress(event, () => {
         didLongPress = true;
         actionSegmentId = segment.id;
         els.segmentActionTitle.textContent = segmentRoundLabel(group.start, group.end);
         els.segmentActionModal.classList.remove("hidden");
-      }, LONG_PRESS_MS);
+      });
     });
-    card.addEventListener("pointerup", () => window.clearTimeout(longPressTimer));
-    card.addEventListener("pointerleave", () => window.clearTimeout(longPressTimer));
+    card.addEventListener("pointerup", () => longPressTimer?.());
+    card.addEventListener("pointerleave", () => longPressTimer?.());
     card.addEventListener("click", (event) => {
       if (isEditing || didLongPress) return;
       if (event.target.closest("input, select, button, [data-segment-drag]")) return;
@@ -3071,9 +3068,12 @@ function renderPartEditor() {
       renderPartEditor();
     });
     card.querySelector("[data-segment-drag]")?.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", segment.id);
+      startMoveDrag(event, "text/plain", segment.id);
     });
-    card.addEventListener("dragover", (event) => event.preventDefault());
+    card.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    });
     card.addEventListener("drop", (event) => {
       event.preventDefault();
       moveSegment(event.dataTransfer.getData("text/plain"), segment.id);
@@ -3211,9 +3211,9 @@ function renderYarnCard(yarn) {
     `;
     let timer = null;
     let longPressed = false;
-    card.addEventListener("pointerdown", () => {
+    card.addEventListener("pointerdown", (event) => {
       longPressed = false;
-      timer = window.setTimeout(() => {
+      timer = startLongPress(event, () => {
       longPressed = true;
       suppressNextSelectionClickUntil = Date.now() + 700;
       selectedYarnIds.add(yarn.id);
@@ -3221,10 +3221,10 @@ function renderYarnCard(yarn) {
         updateStashActionSheet();
         els.stashActionModal.classList.remove("hidden");
         renderStash();
-      }, LONG_PRESS_MS);
+      });
     });
-    card.addEventListener("pointerup", () => window.clearTimeout(timer));
-  card.addEventListener("pointerleave", () => window.clearTimeout(timer));
+    card.addEventListener("pointerup", () => timer?.());
+  card.addEventListener("pointerleave", () => timer?.());
   card.addEventListener("click", () => {
       if (longPressed || Date.now() < suppressNextSelectionClickUntil) return;
       if (selectedYarnIds.size) {
@@ -3264,6 +3264,7 @@ function renderYarnForm() {
   if (hasSupplyColors) {
     yarn.amount = (yarn.supplyColors || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   }
+  els.yarnStockType.closest("label")?.classList.add("hidden");
   [els.yarnLot, els.yarnWeight, els.yarnBrand].forEach((field) => field.closest("label")?.classList.toggle("hidden", isSupply));
   els.yarnUnit.closest("label")?.classList.toggle("hidden", !isSupply);
   els.supplyColorsSection.classList.toggle("hidden", !isSupply);
@@ -3791,6 +3792,33 @@ function updateProgress(patch) {
   render();
 }
 
+function completeCurrentRound() {
+  const pattern = currentPattern();
+  const rows = expandedRows(pattern);
+  const progress = currentProgress();
+  const completedRounds = Math.max(progress.completedRounds, progress.currentRound);
+  Object.assign(progress, { completedRounds, currentRound: Math.min(rows.length, progress.currentRound + 1), currentStitch: 1 });
+  if (completedRounds >= rows.length && !progress.completed) {
+    progress.completed = true;
+    saveState();
+    openSupplyDeductModal(pattern);
+  } else {
+    render();
+  }
+}
+
+function switchToNextPart() {
+  const pattern = currentPattern();
+  const rows = expandedRows(pattern);
+  const progress = currentProgress();
+  const currentRow = rows[progress.currentRound - 1];
+  const partIds = rows.map((row) => row.partId).filter((partId, index, list) => partId && list.indexOf(partId) === index);
+  if (!partIds.length) return;
+  const nextPartId = partIds[(partIds.indexOf(currentRow?.partId) + 1) % partIds.length];
+  const rowIndex = rows.findIndex((row) => row.partId === nextPartId);
+  if (rowIndex >= 0) updateProgress({ currentRound: rowIndex + 1, currentStitch: 1 });
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, Number(value) || min));
 }
@@ -3809,6 +3837,56 @@ function keepScroll(callback) {
   requestAnimationFrame(() => {
     if (scroller) scroller.scrollTop = scrollY;
   });
+}
+
+function startMoveDrag(event, type, value) {
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.dropEffect = "move";
+  event.dataTransfer.setData(type, value);
+  const ghost = document.createElement("span");
+  ghost.style.position = "fixed";
+  ghost.style.left = "-9999px";
+  ghost.style.top = "-9999px";
+  ghost.style.width = "1px";
+  ghost.style.height = "1px";
+  ghost.style.opacity = "0";
+  document.body.append(ghost);
+  event.dataTransfer.setDragImage(ghost, 0, 0);
+  requestAnimationFrame(() => ghost.remove());
+}
+
+function startLongPress(event, callback) {
+  const target = event.currentTarget;
+  const startX = event.clientX;
+  const startY = event.clientY;
+  let cancelled = false;
+  const cleanup = () => {
+    window.clearTimeout(timer);
+    target?.removeEventListener("pointermove", handleMove);
+    target?.removeEventListener("pointerup", cancel);
+    target?.removeEventListener("pointerleave", cancel);
+    target?.removeEventListener("pointercancel", cancel);
+  };
+  const cancel = () => {
+    cancelled = true;
+    cleanup();
+  };
+  const handleMove = (moveEvent) => {
+    const dx = moveEvent.clientX - startX;
+    const dy = moveEvent.clientY - startY;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE) cancel();
+  };
+  const timer = window.setTimeout(() => {
+    if (cancelled) return;
+    cleanup();
+    callback();
+  }, LONG_PRESS_MS);
+  target?.addEventListener("pointermove", handleMove);
+  target?.addEventListener("pointerup", cancel, { once: true });
+  target?.addEventListener("pointerleave", cancel, { once: true });
+  target?.addEventListener("pointercancel", cancel, { once: true });
+  return cancel;
 }
 
 function moveArrayItem(list, sourceIndex, targetIndex) {
@@ -4324,7 +4402,12 @@ els.previousStitchBtn.addEventListener("click", () => updateProgress({ currentSt
 els.nextStitchBtn.addEventListener("click", () => {
   const rows = expandedRows(currentPattern());
   const row = rows[currentProgress().currentRound - 1];
-  updateProgress({ currentStitch: Math.min(rowStitches(row).length, currentProgress().currentStitch + 1) });
+  const total = rowStitches(row).length;
+  if (currentProgress().currentStitch >= total) {
+    completeCurrentRound();
+    return;
+  }
+  updateProgress({ currentStitch: currentProgress().currentStitch + 1 });
 });
 els.restartRoundBtn.addEventListener("click", () => updateProgress({ currentStitch: 1 }));
 els.completeRoundBtn.addEventListener("click", () => {
@@ -4342,6 +4425,7 @@ els.completeRoundBtn.addEventListener("click", () => {
     render();
   }
 });
+els.roundTitle.addEventListener("click", switchToNextPart);
 
 els.newPatternBtn.addEventListener("click", () => {
   const baseName = "新織圖";
@@ -4696,10 +4780,13 @@ els.partSegmentList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-item-row]");
   if (!row) return;
   event.stopPropagation();
-  event.dataTransfer.setData("text/item-row", row.dataset.itemRow);
+  startMoveDrag(event, "text/item-row", row.dataset.itemRow);
 });
 els.partSegmentList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-item-row]")) event.preventDefault();
+  if (event.target.closest("[data-item-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.partSegmentList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-item-row]");
@@ -5145,10 +5232,13 @@ els.brandList.addEventListener("change", (event) => {
 });
 els.brandList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-brand-row]");
-  if (row) event.dataTransfer.setData("text/brand-row", row.dataset.brandRow);
+  if (row) startMoveDrag(event, "text/brand-row", row.dataset.brandRow);
 });
 els.brandList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-brand-row]")) event.preventDefault();
+  if (event.target.closest("[data-brand-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.brandList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-brand-row]");
@@ -5168,10 +5258,13 @@ els.addProjectTypeBtn.addEventListener("click", () => {
 });
 els.projectTypeList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-project-type-row]");
-  if (row) event.dataTransfer.setData("text/project-type-row", row.dataset.projectTypeRow);
+  if (row) startMoveDrag(event, "text/project-type-row", row.dataset.projectTypeRow);
 });
 els.projectTypeList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-project-type-row]")) event.preventDefault();
+  if (event.target.closest("[data-project-type-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.projectTypeList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-project-type-row]");
@@ -5229,10 +5322,13 @@ els.commonGroupList.addEventListener("click", (event) => {
 });
 els.commonGroupList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-common-group-row]");
-  if (row) event.dataTransfer.setData("text/common-group-row", row.dataset.commonGroupRow);
+  if (row) startMoveDrag(event, "text/common-group-row", row.dataset.commonGroupRow);
 });
 els.commonGroupList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-common-group-row]")) event.preventDefault();
+  if (event.target.closest("[data-common-group-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.commonGroupList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-common-group-row]");
@@ -5274,10 +5370,13 @@ els.commonGroupItemList.addEventListener("click", (event) => {
 els.commonGroupItemList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-common-group-item]");
   if (!row) return;
-  event.dataTransfer.setData("text/common-group-item", row.dataset.commonGroupItem);
+  startMoveDrag(event, "text/common-group-item", row.dataset.commonGroupItem);
 });
 els.commonGroupItemList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-common-group-item]")) event.preventDefault();
+  if (event.target.closest("[data-common-group-item]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.commonGroupItemList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-common-group-item]");
@@ -5492,10 +5591,13 @@ els.brandCardColorList.addEventListener("change", (event) => {
 });
 els.toolList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-tool-row]");
-  if (row) event.dataTransfer.setData("text/tool-row", row.dataset.toolRow);
+  if (row) startMoveDrag(event, "text/tool-row", row.dataset.toolRow);
 });
 els.toolList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-tool-row]")) event.preventDefault();
+  if (event.target.closest("[data-tool-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.toolList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-tool-row]");
@@ -5513,10 +5615,13 @@ els.stitchEditorList.addEventListener("input", (event) => {
 });
 els.stitchEditorList.addEventListener("dragstart", (event) => {
   const row = event.target.closest("[data-stitch-row]");
-  if (row) event.dataTransfer.setData("text/stitch-row", row.dataset.stitchRow);
+  if (row) startMoveDrag(event, "text/stitch-row", row.dataset.stitchRow);
 });
 els.stitchEditorList.addEventListener("dragover", (event) => {
-  if (event.target.closest("[data-stitch-row]")) event.preventDefault();
+  if (event.target.closest("[data-stitch-row]")) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  }
 });
 els.stitchEditorList.addEventListener("drop", (event) => {
   const row = event.target.closest("[data-stitch-row]");
