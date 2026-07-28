@@ -814,11 +814,12 @@ textarea {
   gap: 10px;
 }
 .item-editor { grid-template-columns: 28px 1fr 74px 36px; }
-.group-item-editor { grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) 36px; }
+.group-item-editor { grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) 36px !important; }
 .segment-group-editor {
   display: grid;
   gap: 8px;
   min-width: 0;
+  width: 100%;
 }
 .segment-group-items {
   display: grid;
@@ -833,6 +834,11 @@ textarea {
 .segment-group-row select,
 .segment-group-row input {
   min-width: 0;
+  width: 100%;
+}
+.group-item-editor > input[data-item-field] {
+  min-width: 0;
+  width: 100%;
 }
 .mini-add-button {
   min-height: 36px;
@@ -1392,7 +1398,7 @@ textarea {
     font-size: var(--text-sm);
   }
   .item-editor { grid-template-columns: 28px 1fr 74px 36px; }
-  .group-item-editor { grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) 36px; }
+  .group-item-editor { grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) 36px !important; }
   .segment-group-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px; }
   .group-builder-row { grid-template-columns: 28px minmax(0, 1fr) 58px 36px; }
   .sort-menu {

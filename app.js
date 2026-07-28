@@ -13,6 +13,7 @@ const CLOUDINARY_CONFIG = {
   uploadPreset: "gogo_app_upload",
   folder: "gogo_app"
 };
+const LONG_PRESS_MS = 750;
 const IMAGE_MAX_SIZE = 900;
 const IMAGE_QUALITY = 0.72;
 let storageWarningShown = false;
@@ -2658,7 +2659,7 @@ function renderProjectCard(project) {
       updateProjectActionSheet();
       els.projectActionModal.classList.remove("hidden");
       renderProjects();
-    }, 550);
+    }, LONG_PRESS_MS);
   });
   card.addEventListener("pointerup", () => window.clearTimeout(timer));
   card.addEventListener("pointerleave", () => window.clearTimeout(timer));
@@ -2710,7 +2711,7 @@ function renderProjectFolders() {
         els.folderActionTitle.textContent = folder.name;
         els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
         els.folderActionModal.classList.remove("hidden");
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
     card.addEventListener("pointerleave", () => window.clearTimeout(timer));
@@ -2882,7 +2883,7 @@ function renderPatterns() {
         updatePatternActionSheet();
         els.patternActionModal.classList.remove("hidden");
         renderPatterns();
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
   card.addEventListener("pointerleave", () => window.clearTimeout(timer));
@@ -2955,7 +2956,7 @@ function renderPatternEditor() {
         els.partActionTitle.textContent = part.name;
         els.partCopyCount.value = 1;
         els.partActionModal.classList.remove("hidden");
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     section.addEventListener("pointerup", () => {
       window.clearTimeout(longPressTimer);
@@ -3058,7 +3059,7 @@ function renderPartEditor() {
         actionSegmentId = segment.id;
         els.segmentActionTitle.textContent = segmentRoundLabel(group.start, group.end);
         els.segmentActionModal.classList.remove("hidden");
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(longPressTimer));
     card.addEventListener("pointerleave", () => window.clearTimeout(longPressTimer));
@@ -3179,7 +3180,7 @@ function renderYarnFolders() {
         els.folderActionTitle.textContent = folder.name;
         els.pinFolderBtn.textContent = meta.pinned ? "取消置頂" : "置頂";
         els.folderActionModal.classList.remove("hidden");
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
     card.addEventListener("pointerleave", () => window.clearTimeout(timer));
@@ -3219,7 +3220,7 @@ function renderYarnCard(yarn) {
         updateStashActionSheet();
         els.stashActionModal.classList.remove("hidden");
         renderStash();
-      }, 550);
+      }, LONG_PRESS_MS);
     });
     card.addEventListener("pointerup", () => window.clearTimeout(timer));
   card.addEventListener("pointerleave", () => window.clearTimeout(timer));
@@ -4042,7 +4043,7 @@ function attachCoverImageHandlers(container, selector, getItem) {
       window.setTimeout(() => {
         if (container.dataset.justCovered === "true") container.dataset.justCovered = "";
       }, 700);
-    }, 550);
+    }, LONG_PRESS_MS);
   });
   ["pointerup", "pointerleave", "pointercancel"].forEach((eventName) => {
     container.addEventListener(eventName, () => window.clearTimeout(timer));
