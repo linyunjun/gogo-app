@@ -4556,11 +4556,12 @@ function applySupplyDeductions() {
   });
 }
 
-function switchView(view) {
+function switchView(view, options = {}) {
   previousView = activeView;
   if (view !== "projects" && view !== "detail") activeProjectFolder = null;
   if (view !== "patterns" && view !== "patternEdit") activePatternFolder = null;
   activeView = view;
+  if (view === "track") focusTrackingProgress(options.partId);
   render();
   requestAnimationFrame(() => {
     document.querySelector(".workspace")?.scrollTo({ top: 0 });
@@ -4575,6 +4576,29 @@ function updateProject(patch) {
 function updateProgress(patch) {
   Object.assign(currentProgress(), patch);
   render();
+}
+
+function focusTrackingProgress(partId) {
+  const pattern = currentPattern();
+  if (!pattern) return;
+  const rows = expandedRows(pattern);
+  const progress = currentProgress();
+  if (!rows.length) return;
+  const completedRounds = Math.min(rows.length, Math.max(0, Number(progress.completedRounds || 0)));
+  const targetIndex = partId
+    ? rows.findIndex((row, index) => row.partId === partId && index >= completedRounds)
+    : completedRounds < rows.length ? completedRounds : rows.length - 1;
+  const fallbackIndex = partId ? rows.findIndex((row) => row.partId === partId) : -1;
+  const nextIndex = targetIndex >= 0 ? targetIndex : fallbackIndex >= 0 ? fallbackIndex : Math.min(completedRounds, rows.length - 1);
+  const nextRound = nextIndex + 1;
+  progress.completedRounds = completedRounds;
+  if (progress.currentRound !== nextRound) {
+    progress.currentRound = nextRound;
+    progress.currentStitch = 1;
+  } else {
+    const total = rowStitches(rows[nextIndex]).length;
+    progress.currentStitch = clamp(progress.currentStitch, 1, total);
+  }
 }
 
 function completeCurrentRound() {
@@ -5244,12 +5268,7 @@ els.attachedPatternList.addEventListener("click", (event) => {
   const card = event.target.closest(".attached-card");
   const pattern = currentPattern();
   if (partId && pattern) {
-    const rows = expandedRows(pattern);
-    const rowIndex = rows.findIndex((row) => row.partId === partId);
-    if (rowIndex >= 0) {
-      Object.assign(currentProgress(), { currentRound: rowIndex + 1, currentStitch: 1 });
-    }
-    switchView("track");
+    switchView("track", { partId });
     return;
   }
   if (card && pattern) {
