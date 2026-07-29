@@ -411,20 +411,44 @@
             </div>
             <p class="muted">更新 APP 只會重新抓取程式檔案，不會刪除作品、織圖或庫存資料。</p>
             <div class="cloud-backup-panel">
-              <strong>Google 雲端同步</strong>
-              <p class="muted" id="cloudBackupStatus">尚未登入。登入後會自動同步完整資料。</p>
+              <strong>同步信箱雲端同步</strong>
+              <p class="muted" id="cloudBackupStatus">尚未登入。輸入同步信箱後會自動同步完整資料。</p>
               <div class="button-row data-actions">
-                <button class="outline-button" id="copyCloudBackupLinkBtn">用 Google 登入</button>
+                <button class="outline-button" id="copyCloudBackupLinkBtn">用同步信箱登入</button>
                 <button class="outline-button" id="cloudBackupNowBtn">立即同步</button>
                 <button class="outline-button" id="restoreCloudBackupBtn">登出</button>
               </div>
-              <p class="muted">登入後會用你的 Google 帳號分開保存資料，其他使用者看不到你的內容。</p>
+              <p class="muted">同一個同步信箱會使用同一份雲端資料，請只分享給信任的人。</p>
             </div>
             <p class="warning-text">清除後會刪除這台裝置裡的所有作品、織圖與庫存，並回到目前 APP 內建的預設設定。這個動作無法復原。</p>
             <button class="danger-button full-width" id="resetDataBtn">清除所有資料</button>
           </details>
         </section>
       </main>
+
+      <div class="modal hidden" id="cloudSyncChoiceModal">
+        <div class="modal-sheet cloud-sync-sheet">
+          <div class="section-header">
+            <h2>雲端同步</h2>
+            <button class="header-icon" id="closeCloudSyncChoiceModal">×</button>
+          </div>
+          <div class="sync-summary-grid">
+            <div>
+              <span>本機目前有</span>
+              <strong id="localSyncSummary">作品 0 個、織圖 0 個、線材 0 個、消耗品 0 個</strong>
+            </div>
+            <div>
+              <span>同步信箱目前有</span>
+              <strong id="remoteSyncSummary">尚無雲端資料</strong>
+            </div>
+          </div>
+          <div class="sync-choice-actions">
+            <button class="outline-button" id="useRemoteSyncBtn">用同步信箱內容覆蓋本機</button>
+            <button class="outline-button" id="useLocalSyncBtn">用本機內容覆蓋同步信箱</button>
+            <button class="primary-button" id="mergeSyncBtn">合併兩邊內容</button>
+          </div>
+        </div>
+      </div>
 
       <div class="modal hidden" id="attachModal">
         <div class="modal-sheet">

@@ -29,6 +29,7 @@ const IMAGE_QUALITY = 0.72;
 const CLOUD_BACKUP_URL_KEY = `${STORAGE_KEY}-cloud-backup-url`;
 const CLOUD_BACKUP_TIME_KEY = `${STORAGE_KEY}-cloud-backup-time`;
 const CLOUD_BACKUP_HASH_KEY = `${STORAGE_KEY}-cloud-backup-hash`;
+const CLOUD_RECOVERY_KEY = `${STORAGE_KEY}-before-cloud-sync`;
 const CLOUD_BACKUP_DELAY_MS = 30000;
 const CLOUD_BACKUP_MIN_INTERVAL_MS = 10 * 60 * 1000;
 let storageWarningShown = false;
@@ -42,6 +43,7 @@ let cloudSyncTimer = null;
 let cloudSyncInProgress = false;
 let applyingRemoteState = false;
 let googleSignInInProgress = false;
+let cloudSyncChoiceRequested = false;
 
 const defaultData = {
   "settings": {
@@ -1025,6 +1027,7 @@ const defaultState = {
   tools: structuredClone(defaultData.tools),
   stitches: structuredClone(defaultData.stitches),
   projectFolders: [],
+  patternFolders: [],
   yarnFolders: [],
   patterns: [],
   projects: [],
@@ -1213,6 +1216,13 @@ const els = {
   copyCloudBackupLinkBtn: document.querySelector("#copyCloudBackupLinkBtn"),
   cloudBackupNowBtn: document.querySelector("#cloudBackupNowBtn"),
   restoreCloudBackupBtn: document.querySelector("#restoreCloudBackupBtn"),
+  cloudSyncChoiceModal: document.querySelector("#cloudSyncChoiceModal"),
+  closeCloudSyncChoiceModal: document.querySelector("#closeCloudSyncChoiceModal"),
+  localSyncSummary: document.querySelector("#localSyncSummary"),
+  remoteSyncSummary: document.querySelector("#remoteSyncSummary"),
+  useRemoteSyncBtn: document.querySelector("#useRemoteSyncBtn"),
+  useLocalSyncBtn: document.querySelector("#useLocalSyncBtn"),
+  mergeSyncBtn: document.querySelector("#mergeSyncBtn"),
   toolEditModal: document.querySelector("#toolEditModal"),
   closeToolEditModal: document.querySelector("#closeToolEditModal"),
   editToolName: document.querySelector("#editToolName"),
@@ -1474,6 +1484,9 @@ function normalizeState(input) {
   if (["symbol", "abbr"].includes(next.settings.displayMode)) {
     next.settings.displayMode = "letter";
   }
+  ["patterns", "projects", "yarns", "stitches", "commonGroups", "projectFolders", "patternFolders", "yarnFolders", "tools", "brandCards"].forEach((key) => {
+    if (!Array.isArray(next[key])) next[key] = [];
+  });
 
   next.patterns = next.patterns.map((pattern) => ({
     id: pattern.id || crypto.randomUUID(),
@@ -2631,6 +2644,22 @@ function restoreFullBackup(payload) {
   switchView("projects");
 }
 
+function applyStateSnapshot(nextState) {
+  state = normalizeState(nextState);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  selectedProjectId = state.projects[0]?.id || null;
+  selectedPatternId = state.patterns[0]?.id || null;
+  selectedYarnId = state.yarns[0]?.id || null;
+  selectedPartId = state.patterns[0]?.parts?.[0]?.id || null;
+  selectedProjectIds.clear();
+  selectedPatternIds.clear();
+  selectedYarnIds.clear();
+  activeProjectFolder = null;
+  activePatternFolder = null;
+  activeYarnFolder = null;
+  switchView("projects");
+}
+
 function cloudDocRef() {
   if (!firebaseDb || !firebaseUser) return null;
   return firebaseDb.collection("users").doc(firebaseUser.uid).collection("workbench").doc("state");
@@ -2649,6 +2678,160 @@ function cloudStatePayload() {
   };
 }
 
+function stateContentScore(source) {
+  const data = source || {};
+  const arrays = [
+    data.projects,
+    data.patterns,
+    data.yarns,
+    data.projectFolders,
+    data.patternFolders,
+    data.yarnFolders,
+    data.commonGroups,
+    data.tools
+  ];
+  const baseScore = arrays.reduce((total, list) => total + (Array.isArray(list) ? list.length : 0), 0);
+  const brandCardScore = Array.isArray(data.brandCards)
+    ? data.brandCards.reduce((total, card) => total + (Array.isArray(card.colors) ? card.colors.length : 0), 0)
+    : 0;
+  return baseScore + brandCardScore;
+}
+
+function stateCoreScore(source) {
+  const data = source || {};
+  return [data.projects, data.patterns, data.yarns, data.projectFolders, data.patternFolders, data.yarnFolders]
+    .reduce((total, list) => total + (Array.isArray(list) ? list.length : 0), 0);
+}
+
+function hasUserContent(source) {
+  return stateContentScore(source) > 0;
+}
+
+function preserveCloudRecovery(reason = "cloud-sync") {
+  try {
+    localStorage.setItem(CLOUD_RECOVERY_KEY, JSON.stringify({
+      type: "gogo-cloud-recovery",
+      reason,
+      savedAt: new Date().toISOString(),
+      state
+    }));
+  } catch (error) {
+    console.warn("Could not preserve cloud recovery copy", error);
+  }
+}
+
+function cloudStateSummary(source) {
+  const data = normalizeState(source || {});
+  const yarnCount = data.yarns.filter((item) => item.stockType !== "supply").length;
+  const supplyCount = data.yarns.filter((item) => item.stockType === "supply").length;
+  return `作品 ${data.projects.length} 個、織圖 ${data.patterns.length} 個、線材 ${yarnCount} 個、消耗品 ${supplyCount} 個`;
+}
+
+function uniqueByKey(items, keyFn) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyFn(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergePlainArray(localItems = [], remoteItems = []) {
+  return Array.from(new Set([...localItems, ...remoteItems].filter(Boolean)));
+}
+
+function mergeObjectArray(localItems = [], remoteItems = [], keyName = "name") {
+  return uniqueByKey([...structuredClone(localItems), ...structuredClone(remoteItems)], (item) => item?.id || item?.[keyName] || JSON.stringify(item));
+}
+
+function mergeBrandCards(localCards = [], remoteCards = []) {
+  const cards = new Map();
+  [...structuredClone(remoteCards), ...structuredClone(localCards)].forEach((card) => {
+    if (!card?.brand) return;
+    const current = cards.get(card.brand) || { brand: card.brand, colors: [] };
+    current.colors = uniqueByKey([...(current.colors || []), ...(card.colors || [])], (color) => color?.id || `${color?.lot || ""}|${color?.colorName || ""}|${color?.image || ""}`);
+    cards.set(card.brand, current);
+  });
+  return Array.from(cards.values());
+}
+
+function mergeCloudStates(localState, remoteState) {
+  const local = normalizeState(localState || {});
+  const remote = normalizeState(remoteState || {});
+  const merged = {
+    ...remote,
+    ...local,
+    settings: { ...remote.settings, ...local.settings },
+    projects: mergeObjectArray(local.projects, remote.projects, "name"),
+    patterns: mergeObjectArray(local.patterns, remote.patterns, "name"),
+    yarns: mergeObjectArray(local.yarns, remote.yarns, "colorName"),
+    projectFolders: mergeObjectArray(local.projectFolders, remote.projectFolders, "name"),
+    patternFolders: mergeObjectArray(local.patternFolders, remote.patternFolders, "name"),
+    yarnFolders: mergeObjectArray(local.yarnFolders, remote.yarnFolders, "name"),
+    brands: mergePlainArray(local.brands, remote.brands),
+    projectTypes: mergePlainArray(local.projectTypes, remote.projectTypes),
+    tools: mergeObjectArray(local.tools, remote.tools, "name"),
+    commonGroups: mergeObjectArray(local.commonGroups, remote.commonGroups, "name"),
+    stitches: mergeObjectArray(local.stitches, remote.stitches, "zh"),
+    brandWeights: { ...remote.brandWeights, ...local.brandWeights },
+    brandCards: mergeBrandCards(local.brandCards, remote.brandCards)
+  };
+  return normalizeState(merged);
+}
+
+function showCloudSyncChoiceModal(localSummary, remoteSummary, options = {}) {
+  return new Promise((resolve) => {
+    if (!els.cloudSyncChoiceModal) {
+      resolve("cancel");
+      return;
+    }
+    els.localSyncSummary.textContent = localSummary;
+    els.remoteSyncSummary.textContent = remoteSummary;
+    els.useRemoteSyncBtn.disabled = Boolean(options.disableRemote);
+    els.useRemoteSyncBtn.classList.toggle("hidden", Boolean(options.disableRemote));
+    els.mergeSyncBtn.disabled = Boolean(options.disableMerge);
+    els.mergeSyncBtn.classList.toggle("hidden", Boolean(options.disableMerge));
+    els.cloudSyncChoiceModal.classList.remove("hidden");
+    const cleanup = (choice) => {
+      els.cloudSyncChoiceModal.classList.add("hidden");
+      els.useRemoteSyncBtn.removeEventListener("click", chooseRemote);
+      els.useLocalSyncBtn.removeEventListener("click", chooseLocal);
+      els.mergeSyncBtn.removeEventListener("click", chooseMerge);
+      els.closeCloudSyncChoiceModal.removeEventListener("click", chooseCancel);
+      els.cloudSyncChoiceModal.removeEventListener("click", chooseBackdrop);
+      els.useRemoteSyncBtn.disabled = false;
+      els.useRemoteSyncBtn.classList.remove("hidden");
+      els.mergeSyncBtn.disabled = false;
+      els.mergeSyncBtn.classList.remove("hidden");
+      resolve(choice);
+    };
+    const chooseRemote = () => cleanup("remote");
+    const chooseLocal = () => cleanup("local");
+    const chooseMerge = () => cleanup("merge");
+    const chooseCancel = () => cleanup("cancel");
+    const chooseBackdrop = (event) => {
+      if (event.target === els.cloudSyncChoiceModal) cleanup("cancel");
+    };
+    els.useRemoteSyncBtn.addEventListener("click", chooseRemote);
+    els.useLocalSyncBtn.addEventListener("click", chooseLocal);
+    els.mergeSyncBtn.addEventListener("click", chooseMerge);
+    els.closeCloudSyncChoiceModal.addEventListener("click", chooseCancel);
+    els.cloudSyncChoiceModal.addEventListener("click", chooseBackdrop);
+  });
+}
+
+function chooseCloudSyncAction(localState, remoteState) {
+  const localSummary = cloudStateSummary(localState);
+  const remoteSummary = remoteState ? cloudStateSummary(remoteState) : "尚無雲端資料";
+  const localCore = stateCoreScore(localState);
+  const remoteCore = remoteState ? stateCoreScore(remoteState) : 0;
+  if (!remoteState || remoteCore === 0) {
+    return localCore > 0 ? showCloudSyncChoiceModal(localSummary, remoteSummary, { disableRemote: true, disableMerge: true }) : "cancel";
+  }
+  return showCloudSyncChoiceModal(localSummary, remoteSummary);
+}
+
 function updateCloudAuthButtons() {
   els.copyCloudBackupLinkBtn?.classList.toggle("hidden", Boolean(firebaseUser));
   els.restoreCloudBackupBtn?.classList.toggle("hidden", !firebaseUser);
@@ -2663,10 +2846,15 @@ function scheduleCloudSync(delay = CLOUD_BACKUP_DELAY_MS) {
 
 async function syncStateToCloud(showAlert = true) {
   if (!firebaseUser || !firebaseDb) {
-    if (showAlert) alert("請先用 Google 登入。");
+    if (showAlert) alert("請先用同步信箱登入。");
     return;
   }
   if (cloudSyncInProgress) return;
+  if (!hasUserContent(state)) {
+    if (showAlert) alert("目前本機資料是空的，為了避免覆蓋雲端備份，已取消同步。");
+    return;
+  }
+  preserveCloudRecovery("before-cloud-upload");
   cloudSyncInProgress = true;
   updateCloudSyncStatus("同步中...");
   try {
@@ -2688,33 +2876,38 @@ async function syncStateToCloud(showAlert = true) {
   }
 }
 
-async function loadCloudStateAfterSignIn() {
+async function loadCloudStateAfterSignIn(interactive = false) {
   if (!firebaseUser || !firebaseDb) return;
+  preserveCloudRecovery("before-cloud-load");
   updateCloudSyncStatus(`已登入：${firebaseUser.email || "Google 帳號"}，檢查雲端資料中...`);
   try {
     const snapshot = await cloudDocRef().get();
     const remote = snapshot.exists ? snapshot.data() : null;
-    if (remote?.state) {
-      const useRemote = confirm("找到雲端同步資料，要用雲端資料取代這台裝置目前資料嗎？\n\n按「取消」會保留本機資料，並上傳成新的雲端資料。");
-      if (useRemote) {
-        applyingRemoteState = true;
-        state = normalizeState(remote.state);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        selectedProjectId = state.projects[0]?.id || null;
-        selectedPatternId = state.patterns[0]?.id || null;
-        selectedYarnId = state.yarns[0]?.id || null;
-        selectedPartId = state.patterns[0]?.parts?.[0]?.id || null;
-        selectedProjectIds.clear();
-        selectedPatternIds.clear();
-        selectedYarnIds.clear();
-        activeProjectFolder = null;
-        activePatternFolder = null;
-        activeYarnFolder = null;
-        applyingRemoteState = false;
-        updateCloudSyncStatus(`已載入雲端資料：${firebaseUser.email || "Google 帳號"}`);
-        switchView("projects");
-        return;
-      }
+    const remoteState = remote?.state ? normalizeState(remote.state) : null;
+    if (!interactive) {
+      updateCloudSyncStatus(`已登入：${firebaseUser.email || "同步信箱"}，需要時可按「立即同步」。`);
+      return;
+    }
+    const action = await chooseCloudSyncAction(state, remoteState);
+    if (action === "remote") {
+      applyingRemoteState = true;
+      preserveCloudRecovery("before-remote-restore");
+      applyStateSnapshot(remoteState);
+      updateCloudSyncStatus(`已載入同步信箱資料：${firebaseUser.email || "同步信箱"}`);
+      return;
+    }
+    if (action === "merge") {
+      applyingRemoteState = true;
+      preserveCloudRecovery("before-cloud-merge");
+      applyStateSnapshot(mergeCloudStates(state, remoteState));
+      applyingRemoteState = false;
+      await syncStateToCloud(false);
+      updateCloudSyncStatus(`已合併並同步：${firebaseUser.email || "同步信箱"}`);
+      return;
+    }
+    if (action === "cancel") {
+      updateCloudSyncStatus("已取消同步，沒有覆蓋任何資料。");
+      return;
     }
     await syncStateToCloud(false);
   } catch (error) {
@@ -2723,6 +2916,14 @@ async function loadCloudStateAfterSignIn() {
   } finally {
     applyingRemoteState = false;
   }
+}
+
+async function requestManualCloudSync() {
+  if (!firebaseUser || !firebaseDb) {
+    alert("請先用同步信箱登入。");
+    return;
+  }
+  await loadCloudStateAfterSignIn(true);
 }
 
 function initFirebaseSync() {
@@ -2740,7 +2941,11 @@ function initFirebaseSync() {
       firebaseUser = user;
       updateCloudAuthButtons();
       window.clearTimeout(cloudSyncTimer);
-      if (user) loadCloudStateAfterSignIn();
+      if (user) {
+        const shouldAsk = cloudSyncChoiceRequested;
+        cloudSyncChoiceRequested = false;
+        loadCloudStateAfterSignIn(shouldAsk);
+      }
       else updateCloudSyncStatus("尚未登入。登入後會自動同步完整資料。");
     });
   } catch (error) {
@@ -2779,6 +2984,47 @@ async function signInWithGoogle() {
       return;
     }
     alert(`登入失敗：${error.message || "請稍後再試"}`);
+  }
+}
+
+function emailCodePassword(email) {
+  return btoa(unescape(encodeURIComponent(`${FIREBASE_CONFIG.projectId}:${String(email || "").trim().toLowerCase()}`))).slice(0, 32);
+}
+
+async function signInWithEmailCode() {
+  if (googleSignInInProgress) return;
+  if (!firebaseAuth) {
+    alert("Firebase 尚未準備好，請重新整理後再試。");
+    return;
+  }
+  const email = prompt("請輸入同步信箱。\n同一個信箱會同步同一份資料。");
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    alert("請輸入完整信箱，例如 gogo@example.com。");
+    return;
+  }
+  preserveCloudRecovery("before-email-sign-in");
+  cloudSyncChoiceRequested = true;
+  googleSignInInProgress = true;
+  els.copyCloudBackupLinkBtn?.setAttribute("disabled", "disabled");
+  try {
+    await firebaseAuth.signInWithEmailAndPassword(normalizedEmail, emailCodePassword(normalizedEmail));
+  } catch (error) {
+    if (error.code === "auth/user-not-found" || error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
+      try {
+        await firebaseAuth.createUserWithEmailAndPassword(normalizedEmail, emailCodePassword(normalizedEmail));
+      } catch (createError) {
+        alert(`登入失敗：${createError.message || "請確認 Firebase 已啟用 Email/Password 登入"}`);
+      }
+    } else if (error.code === "auth/operation-not-allowed") {
+      alert("請先到 Firebase Authentication 啟用 Email/Password 登入方式。");
+    } else {
+      alert(`登入失敗：${error.message || "請稍後再試"}`);
+    }
+  } finally {
+    googleSignInInProgress = false;
+    els.copyCloudBackupLinkBtn?.removeAttribute("disabled");
   }
 }
 
@@ -5660,8 +5906,8 @@ els.resetDataBtn.addEventListener("click", () => {
 els.backupDataBtn.addEventListener("click", () => downloadFullBackup());
 els.restoreDataBtn.addEventListener("click", () => els.restoreDataInput.click());
 els.updateAppBtn.addEventListener("click", () => forceAppUpdate());
-els.copyCloudBackupLinkBtn?.addEventListener("click", signInWithGoogle);
-els.cloudBackupNowBtn?.addEventListener("click", () => syncStateToCloud(true));
+els.copyCloudBackupLinkBtn?.addEventListener("click", signInWithEmailCode);
+els.cloudBackupNowBtn?.addEventListener("click", requestManualCloudSync);
 els.restoreCloudBackupBtn?.addEventListener("click", signOutGoogle);
 els.restoreDataInput.addEventListener("change", async () => {
   const file = els.restoreDataInput.files?.[0];
