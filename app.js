@@ -2749,10 +2749,6 @@ function initFirebaseSync() {
   }
 }
 
-function shouldUseRedirectSignIn() {
-  return Boolean(window.navigator.standalone) || Boolean(window.matchMedia?.("(display-mode: standalone)")?.matches);
-}
-
 async function signInWithGoogle() {
   if (googleSignInInProgress) return;
   if (!firebaseAuth) {
@@ -2763,10 +2759,6 @@ async function signInWithGoogle() {
   els.copyCloudBackupLinkBtn?.setAttribute("disabled", "disabled");
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
-    if (shouldUseRedirectSignIn()) {
-      await firebaseAuth.signInWithRedirect(provider);
-      return;
-    }
     await firebaseAuth.signInWithPopup(provider);
     googleSignInInProgress = false;
     els.copyCloudBackupLinkBtn?.removeAttribute("disabled");
@@ -2774,6 +2766,14 @@ async function signInWithGoogle() {
     googleSignInInProgress = false;
     els.copyCloudBackupLinkBtn?.removeAttribute("disabled");
     if (error.code === "auth/cancelled-popup-request") return;
+    if (error.code === "auth/unauthorized-domain") {
+      alert("這個網址尚未加入 Firebase 授權網域，請到 Firebase Authentication 加入 linyunjun.github.io。");
+      return;
+    }
+    if (error.code === "auth/web-storage-unsupported") {
+      alert("目前瀏覽器阻擋登入所需的儲存功能，請改用 Safari 正常模式開啟 APP。");
+      return;
+    }
     if (error.code === "auth/popup-blocked" || error.code === "auth/operation-not-supported-in-this-environment") {
       await firebaseAuth.signInWithRedirect(provider);
       return;
