@@ -13,11 +13,34 @@ const CLOUDINARY_CONFIG = {
   uploadPreset: "gogo_app_upload",
   folder: "gogo_app"
 };
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCkRt_XnSiNTfraQ2OgYInwQq9H65jFdeE",
+  authDomain: "gogo-app-e5311.firebaseapp.com",
+  projectId: "gogo-app-e5311",
+  storageBucket: "gogo-app-e5311.firebasestorage.app",
+  messagingSenderId: "1044106911706",
+  appId: "1:1044106911706:web:27a7c5fc0beadd530aeae3",
+  measurementId: "G-TJN4QMWX77"
+};
 const LONG_PRESS_MS = 750;
 const LONG_PRESS_MOVE_TOLERANCE = 12;
 const IMAGE_MAX_SIZE = 900;
 const IMAGE_QUALITY = 0.72;
+const CLOUD_BACKUP_URL_KEY = `${STORAGE_KEY}-cloud-backup-url`;
+const CLOUD_BACKUP_TIME_KEY = `${STORAGE_KEY}-cloud-backup-time`;
+const CLOUD_BACKUP_HASH_KEY = `${STORAGE_KEY}-cloud-backup-hash`;
+const CLOUD_BACKUP_DELAY_MS = 30000;
+const CLOUD_BACKUP_MIN_INTERVAL_MS = 10 * 60 * 1000;
 let storageWarningShown = false;
+let cloudBackupTimer = null;
+let cloudBackupInProgress = false;
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+let firebaseUser = null;
+let cloudSyncTimer = null;
+let cloudSyncInProgress = false;
+let applyingRemoteState = false;
 
 const defaultData = {
   "settings": {
@@ -1185,6 +1208,10 @@ const els = {
   restoreDataInput: document.querySelector("#restoreDataInput"),
   updateAppBtn: document.querySelector("#updateAppBtn"),
   resetDataBtn: document.querySelector("#resetDataBtn"),
+  cloudBackupStatus: document.querySelector("#cloudBackupStatus"),
+  copyCloudBackupLinkBtn: document.querySelector("#copyCloudBackupLinkBtn"),
+  cloudBackupNowBtn: document.querySelector("#cloudBackupNowBtn"),
+  restoreCloudBackupBtn: document.querySelector("#restoreCloudBackupBtn"),
   toolEditModal: document.querySelector("#toolEditModal"),
   closeToolEditModal: document.querySelector("#closeToolEditModal"),
   editToolName: document.querySelector("#editToolName"),
@@ -1671,6 +1698,7 @@ function normalizeGroupItems(group, fallbackId = "sc") {
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    scheduleCloudSync();
   } catch (error) {
     console.error("Save failed", error);
     if (!storageWarningShown) {
@@ -2600,6 +2628,146 @@ function restoreFullBackup(payload) {
   selectedPatternIds.clear();
   selectedYarnIds.clear();
   switchView("projects");
+}
+
+function cloudDocRef() {
+  if (!firebaseDb || !firebaseUser) return null;
+  return firebaseDb.collection("users").doc(firebaseUser.uid).collection("workbench").doc("state");
+}
+
+function updateCloudSyncStatus(text) {
+  if (els.cloudBackupStatus) els.cloudBackupStatus.textContent = text;
+}
+
+function cloudStatePayload() {
+  return {
+    type: "gogo-full-backup",
+    version: 1,
+    clientUpdatedAt: new Date().toISOString(),
+    state
+  };
+}
+
+function updateCloudAuthButtons() {
+  els.copyCloudBackupLinkBtn?.classList.toggle("hidden", Boolean(firebaseUser));
+  els.restoreCloudBackupBtn?.classList.toggle("hidden", !firebaseUser);
+  els.cloudBackupNowBtn?.classList.toggle("hidden", !firebaseUser);
+}
+
+function scheduleCloudSync(delay = CLOUD_BACKUP_DELAY_MS) {
+  if (applyingRemoteState || !firebaseUser || !firebaseDb) return;
+  window.clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(() => syncStateToCloud(false), delay);
+}
+
+async function syncStateToCloud(showAlert = true) {
+  if (!firebaseUser || !firebaseDb) {
+    if (showAlert) alert("請先用 Google 登入。");
+    return;
+  }
+  if (cloudSyncInProgress) return;
+  cloudSyncInProgress = true;
+  updateCloudSyncStatus("同步中...");
+  try {
+    await cloudDocRef().set({
+      ...cloudStatePayload(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    const syncedAt = new Date().toLocaleString("zh-TW", { hour12: false });
+    updateCloudSyncStatus(`已登入：${firebaseUser.email || "Google 帳號"}，上次同步 ${syncedAt}`);
+    localStorage.setItem(CLOUD_BACKUP_TIME_KEY, new Date().toISOString());
+    if (showAlert) alert("已同步到雲端。");
+  } catch (error) {
+    console.error("Cloud sync failed", error);
+    const message = error.message || "請稍後再試";
+    updateCloudSyncStatus(`同步失敗：${message}`);
+    if (showAlert) alert(`同步失敗：${message}`);
+  } finally {
+    cloudSyncInProgress = false;
+  }
+}
+
+async function loadCloudStateAfterSignIn() {
+  if (!firebaseUser || !firebaseDb) return;
+  updateCloudSyncStatus(`已登入：${firebaseUser.email || "Google 帳號"}，檢查雲端資料中...`);
+  try {
+    const snapshot = await cloudDocRef().get();
+    const remote = snapshot.exists ? snapshot.data() : null;
+    if (remote?.state) {
+      const useRemote = confirm("找到雲端同步資料，要用雲端資料取代這台裝置目前資料嗎？\n\n按「取消」會保留本機資料，並上傳成新的雲端資料。");
+      if (useRemote) {
+        applyingRemoteState = true;
+        state = normalizeState(remote.state);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        selectedProjectId = state.projects[0]?.id || null;
+        selectedPatternId = state.patterns[0]?.id || null;
+        selectedYarnId = state.yarns[0]?.id || null;
+        selectedPartId = state.patterns[0]?.parts?.[0]?.id || null;
+        selectedProjectIds.clear();
+        selectedPatternIds.clear();
+        selectedYarnIds.clear();
+        activeProjectFolder = null;
+        activePatternFolder = null;
+        activeYarnFolder = null;
+        applyingRemoteState = false;
+        updateCloudSyncStatus(`已載入雲端資料：${firebaseUser.email || "Google 帳號"}`);
+        switchView("projects");
+        return;
+      }
+    }
+    await syncStateToCloud(false);
+  } catch (error) {
+    console.error("Cloud load failed", error);
+    updateCloudSyncStatus(`雲端資料讀取失敗：${error.message || "請稍後再試"}`);
+  } finally {
+    applyingRemoteState = false;
+  }
+}
+
+function initFirebaseSync() {
+  if (!window.firebase) {
+    updateCloudSyncStatus("Firebase 載入失敗，請確認網路後重新整理。");
+    updateCloudAuthButtons();
+    return;
+  }
+  try {
+    firebaseApp = firebase.apps?.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseAuth = firebase.auth();
+    firebaseDb = firebase.firestore();
+    updateCloudAuthButtons();
+    firebaseAuth.onAuthStateChanged((user) => {
+      firebaseUser = user;
+      updateCloudAuthButtons();
+      window.clearTimeout(cloudSyncTimer);
+      if (user) loadCloudStateAfterSignIn();
+      else updateCloudSyncStatus("尚未登入。登入後會自動同步完整資料。");
+    });
+  } catch (error) {
+    console.error("Firebase init failed", error);
+    updateCloudSyncStatus(`Firebase 初始化失敗：${error.message || "請稍後再試"}`);
+  }
+}
+
+async function signInWithGoogle() {
+  if (!firebaseAuth) {
+    alert("Firebase 尚未準備好，請重新整理後再試。");
+    return;
+  }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await firebaseAuth.signInWithPopup(provider);
+  } catch (error) {
+    if (error.code === "auth/popup-blocked" || error.code === "auth/operation-not-supported-in-this-environment") {
+      await firebaseAuth.signInWithRedirect(provider);
+      return;
+    }
+    alert(`登入失敗：${error.message || "請稍後再試"}`);
+  }
+}
+
+async function signOutGoogle() {
+  if (!firebaseAuth) return;
+  await firebaseAuth.signOut();
 }
 
 function patternCloudShareUrl(dataUrl) {
@@ -5475,6 +5643,9 @@ els.resetDataBtn.addEventListener("click", () => {
 els.backupDataBtn.addEventListener("click", () => downloadFullBackup());
 els.restoreDataBtn.addEventListener("click", () => els.restoreDataInput.click());
 els.updateAppBtn.addEventListener("click", () => forceAppUpdate());
+els.copyCloudBackupLinkBtn?.addEventListener("click", signInWithGoogle);
+els.cloudBackupNowBtn?.addEventListener("click", () => syncStateToCloud(true));
+els.restoreCloudBackupBtn?.addEventListener("click", signOutGoogle);
 els.restoreDataInput.addEventListener("change", async () => {
   const file = els.restoreDataInput.files?.[0];
   if (!file) return;
@@ -6077,6 +6248,7 @@ requestAnimationFrame(() => {
   document.querySelector(".workspace")?.scrollTo({ top: 0 });
 });
 render();
+initFirebaseSync();
 checkSharedPatternImportUrl();
 checkSharedPatternFromUrl();
 checkSharedStashFromUrl();
