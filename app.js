@@ -1166,6 +1166,7 @@ const els = {
   yarnEditTitle: document.querySelector("#yarnEditTitle"),
   stashList: document.querySelector("#stashList"),
   stockTypeTabs: document.querySelector("#stockTypeTabs"),
+  importStashBtn: document.querySelector("#importStashBtn"),
   colorCardYarnBtn: document.querySelector("#colorCardYarnBtn"),
   bulkYarnBtn: document.querySelector("#bulkYarnBtn"),
   newYarnBtn: document.querySelector("#newYarnBtn"),
@@ -3033,11 +3034,19 @@ async function signOutGoogle() {
   await firebaseAuth.signOut();
 }
 
-function patternCloudShareUrl(dataUrl) {
-  const url = new URL(location.href);
+function shareBaseUrl() {
+  return PUBLIC_ASSET_BASE;
+}
+
+function shareUrlWithParam(key, value) {
+  const url = new URL(shareBaseUrl());
   url.hash = "";
-  url.searchParams.set("importPatternUrl", dataUrl);
+  url.searchParams.set(key, value);
   return url.toString();
+}
+
+function patternCloudShareUrl(dataUrl) {
+  return shareUrlWithParam("importPatternUrl", dataUrl);
 }
 
 function extractPatternImportUrl(text) {
@@ -3116,7 +3125,7 @@ async function checkSharedPatternImportUrl() {
 
 async function sharePattern(pattern) {
   const payload = patternSharePackage(pattern);
-  const shareUrl = `${location.origin}${location.pathname}#pattern=${encodeSharePayload(payload)}`;
+  const shareUrl = `${shareBaseUrl()}#pattern=${encodeSharePayload(payload)}`;
   const text = `匯入「${pattern.name}」織圖：${shareUrl}`;
   const canUseLink = shareUrl.length < 1800;
   if (canUseLink && navigator.share) {
@@ -3149,6 +3158,30 @@ function stashSharePackage(items) {
   };
 }
 
+function stashCloudShareUrl(dataUrl) {
+  return shareUrlWithParam("importStashUrl", dataUrl);
+}
+
+function extractStashImportUrl(text) {
+  const value = String(text || "").trim();
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    const embedded = url.searchParams.get("importStashUrl") || url.searchParams.get("stashUrl");
+    if (embedded) return embedded;
+    if (url.hostname.includes("res.cloudinary.com")) return url.toString();
+  } catch {}
+  return "";
+}
+
+async function readStashImportText(textOrUrl) {
+  const importUrl = extractStashImportUrl(textOrUrl);
+  if (!importUrl) return normalizeClipboardJsonText(textOrUrl);
+  const response = await fetch(importUrl);
+  if (!response.ok) throw new Error("無法讀取庫存分享資料");
+  return normalizeClipboardJsonText(await response.text());
+}
+
 function importStashPackage(payload) {
   const items = payload?.type === "gogo-stash" ? payload.items : payload?.items || [];
   if (!Array.isArray(items) || !items.length) throw new Error("不是可匯入的庫存連結");
@@ -3163,27 +3196,41 @@ function importStashPackage(payload) {
   return normalized;
 }
 
+function finishImportedStash(imported) {
+  activeStockType = imported[0]?.stockType || activeStockType;
+  selectedYarnId = imported[0]?.id || selectedYarnId;
+  selectedYarnIds.clear();
+  switchView("stash");
+  alert(`已匯入 ${imported.length} 個庫存項目。`);
+}
+
+async function importStashText(textOrUrl) {
+  const text = await readStashImportText(textOrUrl);
+  const imported = importStashPackage(JSON.parse(text));
+  finishImportedStash(imported);
+}
+
+async function importStashFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    await importStashText(text);
+  } catch (error) {
+    alert(`剪貼簿內容不是可匯入的庫存資料：${error.message || "請確認已複製庫存分享連結"}`);
+  }
+}
+
 async function shareStashItems(items) {
   const payload = stashSharePackage(items);
-  const shareUrl = `${location.origin}${location.pathname}#stash=${encodeSharePayload(payload)}`;
   const title = items.length === 1 ? `匯入「${items[0].colorName}」庫存` : `匯入 ${items.length} 個庫存項目`;
-  if (shareUrl.length > 6000) {
-    alert("選取的庫存資料太多或含圖片，連結會太長。請少選幾個，或先移除圖片後再分享。");
-    return;
-  }
-  if (navigator.share) {
-    try {
-      await navigator.share({ title, text: title, url: shareUrl });
-      return;
-    } catch (error) {
-      if (error.name === "AbortError") return;
-    }
-  }
+  const text = JSON.stringify(payload, null, 2);
+  const filename = items.length === 1 ? `${items[0]?.colorName || "gogo-stash"}.txt` : `${items.length}-stash-items.txt`;
   try {
-    await navigator.clipboard?.writeText(shareUrl);
-    alert("分享連結已複製。");
-  } catch {
-    prompt("複製這個庫存分享連結：", shareUrl);
+    const dataUrl = await uploadTextToCloudinary(text, filename);
+    const shareUrl = stashCloudShareUrl(dataUrl);
+    await navigator.clipboard.writeText(shareUrl);
+    alert(`${title}的連結已複製，可以貼到 LINE 或其他裝置匯入。`);
+  } catch (error) {
+    alert(`庫存分享失敗：${error.message || "請稍後再試"}`);
   }
 }
 
@@ -3207,6 +3254,13 @@ function checkSharedPatternFromUrl() {
 }
 
 function checkSharedStashFromUrl() {
+  const importUrl = new URLSearchParams(location.search).get("importStashUrl");
+  if (importUrl) {
+    importStashText(importUrl)
+      .catch((error) => alert(`庫存分享連結無法匯入：${error.message || "請確認連結是否正確"}`))
+      .finally(() => history.replaceState(null, "", location.pathname + location.hash));
+    return;
+  }
   const match = location.hash.match(/^#stash=(.+)$/);
   if (!match) return;
   try {
@@ -5732,6 +5786,7 @@ els.stockTypeTabs.addEventListener("click", (event) => {
   selectedYarnIds.clear();
   render();
 });
+els.importStashBtn?.addEventListener("click", importStashFromClipboard);
 els.yarnImageInput.addEventListener("change", () => readImages(els.yarnImageInput.files, addYarnImage));
 attachCoverImageHandlers(els.yarnImagePreview, "[data-yarn-image]", () => state.yarns.find((item) => item.id === selectedYarnId), "yarn");
 els.yarnImagePreview.addEventListener("click", (event) => {
