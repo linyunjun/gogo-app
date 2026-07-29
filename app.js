@@ -1120,6 +1120,9 @@ const els = {
   writtenPattern: document.querySelector("#writtenPattern"),
   previousRoundBtn: document.querySelector("#previousRoundBtn"),
   nextRoundBtn: document.querySelector("#nextRoundBtn"),
+  trackPartModal: document.querySelector("#trackPartModal"),
+  closeTrackPartModal: document.querySelector("#closeTrackPartModal"),
+  trackPartOptions: document.querySelector("#trackPartOptions"),
   previousStitchBtn: document.querySelector("#previousStitchBtn"),
   nextStitchBtn: document.querySelector("#nextStitchBtn"),
   restartRoundBtn: document.querySelector("#restartRoundBtn"),
@@ -2371,6 +2374,15 @@ function uniquePatternName(baseName, currentId = "") {
   return `${name} ${index}`;
 }
 
+function uniqueProjectName(baseName, currentId = "") {
+  const existing = new Set(state.projects.filter((project) => project.id !== currentId).map((project) => project.name.trim()));
+  let name = baseName.trim() || "未命名作品";
+  if (!existing.has(name)) return name;
+  let index = 2;
+  while (existing.has(`${name} ${index}`)) index += 1;
+  return `${name} ${index}`;
+}
+
 function hasSameName(name, list, getName = (item) => item, currentId = "") {
   const normalized = String(name || "").trim().toLowerCase();
   if (!normalized) return false;
@@ -3282,6 +3294,12 @@ function checkSharedStashFromUrl() {
 function attachPatternCopy(project, templateId) {
   const template = state.patterns.find((pattern) => pattern.id === templateId) || templatePatterns()[0];
   if (!template) return "";
+  const currentPattern = state.patterns.find((pattern) => pattern.id === project.activePatternId);
+  const sourcePattern = currentPattern?.sourcePatternId
+    ? state.patterns.find((pattern) => pattern.id === currentPattern.sourcePatternId)
+    : currentPattern;
+  const shouldAdoptName = !project.name || /^新作品\s*\d+$/.test(project.name) || (sourcePattern?.name && project.name === sourcePattern.name);
+  const shouldAdoptType = !project.type || project.type === (state.projectTypes[0] || "作品") || (sourcePattern?.type && project.type === sourcePattern.type);
   if (project.activePatternId) {
     state.patterns = state.patterns.filter((pattern) => pattern.id !== project.activePatternId || !pattern.isProjectCopy);
   }
@@ -3292,6 +3310,8 @@ function attachPatternCopy(project, templateId) {
   state.patterns.push(copy);
   project.patternIds = [copy.id];
   project.activePatternId = copy.id;
+  if (shouldAdoptName) project.name = uniqueProjectName(template.name, project.id);
+  if (shouldAdoptType) project.type = template.type || project.type || state.projectTypes[0] || "作品";
   project.yarnIds = Array.from(new Set([...(project.yarnIds || []), ...(copy.yarnIds || [])]));
   project.supplyIds = Array.from(new Set([...(project.supplyIds || []), ...(copy.supplyIds || [])]));
   project.toolIds = Array.from(new Set([...(project.toolIds || []), ...(copy.toolIds || [])]));
@@ -3514,9 +3534,6 @@ function renderTracking() {
   const rows = expandedRows(pattern);
   progress.completedRounds = Math.min(rows.length, Math.max(0, Number(progress.completedRounds || 0)));
   progress.currentRound = clamp(progress.currentRound, 1, rows.length);
-  if (progress.completedRounds < rows.length && progress.currentRound <= progress.completedRounds) {
-    progress.currentRound = progress.completedRounds + 1;
-  }
   const row = rows[progress.currentRound - 1];
   const stitches = rowStitches(row);
   progress.currentStitch = clamp(progress.currentStitch, 1, stitches.length);
@@ -4575,16 +4592,28 @@ function completeCurrentRound() {
   }
 }
 
-function switchToNextPart() {
+function switchToPart(partId) {
   const pattern = currentPattern();
   const rows = expandedRows(pattern);
-  const progress = currentProgress();
-  const currentRow = rows[progress.currentRound - 1];
-  const partIds = rows.map((row) => row.partId).filter((partId, index, list) => partId && list.indexOf(partId) === index);
-  if (!partIds.length) return;
-  const nextPartId = partIds[(partIds.indexOf(currentRow?.partId) + 1) % partIds.length];
-  const rowIndex = rows.findIndex((row) => row.partId === nextPartId);
-  if (rowIndex >= 0) updateProgress({ currentRound: rowIndex + 1, currentStitch: 1 });
+  const rowIndex = rows.findIndex((row) => row.partId === partId);
+  if (rowIndex < 0) return;
+  updateProgress({ currentRound: rowIndex + 1, currentStitch: 1 });
+}
+
+function openTrackPartPicker() {
+  const pattern = currentPattern();
+  const project = currentProject();
+  if (!pattern || !els.trackPartModal || !els.trackPartOptions) return;
+  const rows = expandedRows(pattern);
+  const currentRow = rows[currentProgress().currentRound - 1];
+  const progressList = partProgressList(project, pattern);
+  els.trackPartOptions.innerHTML = progressList.map(({ part, done, total, percent }) => `
+    <button class="part-switch-option ${part.id === currentRow?.partId ? "current" : ""}" data-switch-track-part="${part.id}">
+      <strong>${escapeHtml(part.name)}</strong>
+      <span>${done}/${total} 段 · ${percent}%</span>
+    </button>
+  `).join("");
+  els.trackPartModal.classList.remove("hidden");
 }
 
 function clamp(value, min, max) {
@@ -5260,7 +5289,14 @@ els.completeRoundBtn.addEventListener("click", () => {
     render();
   }
 });
-els.roundTitle.addEventListener("click", switchToNextPart);
+els.roundTitle.addEventListener("click", openTrackPartPicker);
+els.closeTrackPartModal?.addEventListener("click", () => els.trackPartModal.classList.add("hidden"));
+els.trackPartOptions?.addEventListener("click", (event) => {
+  const partId = event.target.closest("[data-switch-track-part]")?.dataset.switchTrackPart;
+  if (!partId) return;
+  els.trackPartModal.classList.add("hidden");
+  switchToPart(partId);
+});
 
 els.newPatternBtn.addEventListener("click", () => {
   const baseName = "新織圖";

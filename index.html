@@ -451,6 +451,16 @@
         </div>
       </div>
 
+      <div class="modal hidden" id="trackPartModal">
+        <div class="modal-sheet">
+          <div class="section-header">
+            <h2>切換部分</h2>
+            <button class="header-icon" id="closeTrackPartModal">×</button>
+          </div>
+          <div class="part-switch-list" id="trackPartOptions"></div>
+        </div>
+      </div>
+
       <div class="modal hidden" id="attachModal">
         <div class="modal-sheet">
           <div class="section-header">
@@ -639,7 +649,7 @@
             品牌分類
             <select id="colorCardStockBrand"></select>
           </label>
-          <label>
+          <label class="color-card-stock-url-field">
             購買連結
             <input id="colorCardStockUrl" type="url" placeholder="https://..." />
           </label>
