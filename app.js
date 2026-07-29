@@ -41,6 +41,7 @@ let firebaseUser = null;
 let cloudSyncTimer = null;
 let cloudSyncInProgress = false;
 let applyingRemoteState = false;
+let googleSignInInProgress = false;
 
 const defaultData = {
   "settings": {
@@ -2748,15 +2749,31 @@ function initFirebaseSync() {
   }
 }
 
+function shouldUseRedirectSignIn() {
+  return Boolean(window.navigator.standalone) || Boolean(window.matchMedia?.("(display-mode: standalone)")?.matches);
+}
+
 async function signInWithGoogle() {
+  if (googleSignInInProgress) return;
   if (!firebaseAuth) {
     alert("Firebase 尚未準備好，請重新整理後再試。");
     return;
   }
+  googleSignInInProgress = true;
+  els.copyCloudBackupLinkBtn?.setAttribute("disabled", "disabled");
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
+    if (shouldUseRedirectSignIn()) {
+      await firebaseAuth.signInWithRedirect(provider);
+      return;
+    }
     await firebaseAuth.signInWithPopup(provider);
+    googleSignInInProgress = false;
+    els.copyCloudBackupLinkBtn?.removeAttribute("disabled");
   } catch (error) {
+    googleSignInInProgress = false;
+    els.copyCloudBackupLinkBtn?.removeAttribute("disabled");
+    if (error.code === "auth/cancelled-popup-request") return;
     if (error.code === "auth/popup-blocked" || error.code === "auth/operation-not-supported-in-this-environment") {
       await firebaseAuth.signInWithRedirect(provider);
       return;
