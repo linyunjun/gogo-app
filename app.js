@@ -1856,6 +1856,7 @@ function parseImportedItems(text) {
 function parseTextPattern(text) {
   const parts = [];
   const unparsed = [];
+  const missingStitches = [];
   let importedName = "";
   let currentPart = null;
   const ensurePart = (name = "文字匯入") => {
@@ -1898,6 +1899,7 @@ function parseTextPattern(text) {
       return;
     }
     parsed.unresolved.forEach((item) => unparsed.push(`第 ${index + 1} 行無法辨識：${item}`));
+    parsed.unresolved.forEach((item) => missingStitches.push(`第 ${index + 1} 行：${item}`));
     const part = ensurePart();
     for (let round = start; round <= end; round += 1) {
       part.segments.push({ id: crypto.randomUUID(), repeat: 1, note, items: structuredClone(parsed.items) });
@@ -1905,7 +1907,7 @@ function parseTextPattern(text) {
   });
   const validParts = parts.filter((part) => part.segments.length);
   parts.filter((part) => !part.segments.length).forEach((part) => unparsed.push(`部分「${part.name}」沒有可辨識段落`));
-  return { name: importedName, parts: validParts, segments: validParts.flatMap((part) => part.segments), unparsed };
+  return { name: importedName, parts: validParts, segments: validParts.flatMap((part) => part.segments), unparsed, missingStitches };
 }
 
 function findStitch(value) {
@@ -1938,7 +1940,7 @@ function expandedRows(pattern) {
     part.segments.forEach((segment) => {
       const repeat = Math.max(1, Number(segment.repeat || 1));
       for (let index = 0; index < repeat; index += 1) {
-        rows.push({ ...segment, partId: part.id, partName: part.name, round: partRound, label: formatRound(partRound) });
+        rows.push({ ...segment, partId: part.id, partName: part.name, partNotes: part.notes || "", round: partRound, label: formatRound(partRound) });
         partRound += 1;
       }
     });
@@ -2453,9 +2455,36 @@ function stablePatternKey(pattern) {
   return JSON.stringify(scrub(pattern));
 }
 
+function collectMissingPatternStitches(pattern) {
+  const stitchIds = new Set(state.stitches.map((stitch) => stitch.id));
+  const missing = new Set();
+  const checkItems = (items = []) => {
+    items.forEach((item) => {
+      if (item?.type === "group") {
+        checkItems(item.items || []);
+        return;
+      }
+      const stitchId = item?.stitchId;
+      if (stitchId && !stitchIds.has(stitchId)) missing.add(stitchId);
+    });
+  };
+  (pattern?.parts || []).forEach((part) => {
+    (part.segments || []).forEach((segment) => checkItems(segment.items || []));
+  });
+  (pattern?.segments || []).forEach((segment) => checkItems(segment.items || []));
+  return Array.from(missing);
+}
+
+function assertPatternStitchesExist(pattern) {
+  const missing = collectMissingPatternStitches(pattern);
+  if (!missing.length) return;
+  throw new Error(`缺少以下針法，請先到設定新增後再匯入：${missing.join("、")}`);
+}
+
 function importPatternPackage(payload) {
   const pattern = payload?.type === "gogo-pattern" ? payload.pattern : payload?.pattern || payload;
   if (!pattern || typeof pattern !== "object") throw new Error("不是可匯入的織圖檔");
+  assertPatternStitchesExist(pattern);
   const importKey = stablePatternKey(pattern);
   const existing = templatePatterns().find((item) => item.importKey === importKey);
   if (existing) {
@@ -2494,6 +2523,10 @@ function normalizeClipboardJsonText(text) {
 
 function patternItemsToText(items = []) {
   return items.map(compactItemDisplay).join(",");
+}
+
+function rowNotes(row) {
+  return [row?.partNotes, row?.note].map((item) => String(item || "").trim()).filter((item, index, list) => item && list.indexOf(item) === index);
 }
 
 function patternToText(pattern) {
@@ -3552,18 +3585,19 @@ function renderTracking() {
     const line = document.createElement("div");
     line.className = `pattern-line ${rowIndex === currentIndex ? "current-line" : ""} ${rowIndex < progress.completedRounds ? "completed" : ""}`;
     if (rowIndex !== currentIndex) {
-      line.innerHTML = `<span class="round-chip">${escapeHtml(patternRow.partName || "部分")} · ${escapeHtml(formatRound(patternRow.round))}</span><span>${escapeHtml(patternRow.note || summarizeItems(patternRow.items))}</span>`;
+      const notes = rowNotes(patternRow);
+      line.innerHTML = `<span class="round-chip">${escapeHtml(patternRow.partName || "部分")} · ${escapeHtml(formatRound(patternRow.round))}</span><span>${escapeHtml(summarizeItems(patternRow.items))}</span>${notes.map((note) => `<span class="pattern-note-chip">${escapeHtml(note)}</span>`).join("")}`;
     } else {
       const summary = document.createElement("span");
       summary.className = "pattern-summary-chip";
       summary.textContent = summarizeItems(patternRow.items);
       line.append(summary);
-      if (patternRow.note) {
+      rowNotes(patternRow).forEach((text) => {
         const note = document.createElement("span");
         note.className = "pattern-note-chip";
-        note.textContent = patternRow.note;
+        note.textContent = text;
         line.append(note);
-      }
+      });
       const breakLine = document.createElement("span");
       breakLine.className = "pattern-line-break";
       line.append(breakLine);
@@ -5444,6 +5478,11 @@ els.convertTextPatternBtn.addEventListener("click", () => {
   const result = parseTextPattern(els.textPatternInput.value);
   const name = (els.textPatternName.value.trim() || result.name || "文字匯入織圖");
   if (warnDuplicateName(name, templatePatterns(), "織圖", (pattern) => pattern.name)) return;
+  if (result.missingStitches?.length) {
+    els.textPatternUnparsed.classList.remove("hidden");
+    els.textPatternUnparsed.innerHTML = `<strong>缺少以下針法，請先到設定新增後再匯入：</strong>${result.missingStitches.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}`;
+    return;
+  }
   if (!result.parts.length) {
     els.textPatternUnparsed.classList.remove("hidden");
     els.textPatternUnparsed.innerHTML = `<strong>沒有成功辨識的段落</strong>${result.unparsed.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}`;
